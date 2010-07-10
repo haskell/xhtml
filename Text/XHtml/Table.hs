@@ -28,7 +28,7 @@ instance HTMLTABLE Html where
       cell h = 
          let
               cellFn x y = h ! (add x colspan $ add y rowspan $ [])
-              add 1 fn rest = rest
+              add 1 _  rest = rest
               add n fn rest = fn n : rest
               r = BT.single cellFn
          in 
@@ -60,7 +60,12 @@ above   a b = combine BT.above (cell a) (cell b)
 beside  a b = combine BT.beside (cell a) (cell b)
 (<->) = beside
 
-
+combine :: (BT.BlockTable (Int -> Int -> Html) ->
+            BT.BlockTable (Int -> Int -> Html) ->
+            BT.BlockTable (Int -> Int -> Html))
+        -> HtmlTable
+        -> HtmlTable
+        -> HtmlTable
 combine fn (HtmlTable a) (HtmlTable b) = mkHtmlTable (a `fn` b)
 
 -- Both aboves and besides presume a non-empty list.

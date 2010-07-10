@@ -99,7 +99,7 @@ defList items
 --
 
 widget :: String -> String -> [HtmlAttr] -> Html
-widget w n markupAttrs = input ! ([thetype w] ++ ns ++ markupAttrs)
+widget w n attrs = input ! ([thetype w] ++ ns ++ attrs)
   where ns = if null n then [] else [name n,identifier n]
 
 checkbox :: String -> String -> Html

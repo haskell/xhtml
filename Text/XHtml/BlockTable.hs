@@ -121,12 +121,12 @@ t1 `beside` t2 = combine t1 t2 (\ lst1 lst2 r ->
       -- but is always true for these combinators.
       -- I should assert this!
       -- I should even prove this.
-      beside (x:xs) (y:ys) = (x ++ y) : beside xs ys
-      beside (x:xs) []     = x        : xs ++ r
-      beside []     (y:ys) = y        : ys ++ r
-      beside []     []     =                  r
+      beside' (x:xs) (y:ys) = (x ++ y) : beside' xs ys
+      beside' (x:xs) []     = x        : xs ++ r
+      beside' []     (y:ys) = y        : ys ++ r
+      beside' []     []     =                  r
     in
-      beside (lst1 []) (lst2 []))
+      beside' (lst1 []) (lst2 []))
 
 -- | trans flips (transposes) over the x and y axis of
 -- the table. It is only used internally, and typically

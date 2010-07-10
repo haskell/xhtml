@@ -95,8 +95,8 @@ instance (ADDATTRS b) => ADDATTRS (a -> b) where
 instance ADDATTRS Html where
       (Html htmls) ! attr = Html (map addAttrs htmls)
         where
-              addAttrs (html@(HtmlTag { markupAttrs = markupAttrs }) )
-                              = html { markupAttrs = markupAttrs ++ attr }
+              addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
+                              = html { markupAttrs = attrs ++ attr }
               addAttrs html = html
 
 
@@ -253,10 +253,10 @@ showHtml' :: HtmlElement -> ShowS
 showHtml' (HtmlString str) = (++) str
 showHtml'(HtmlTag { markupTag = name,
                     markupContent = html,
-                    markupAttrs = markupAttrs })
+                    markupAttrs = attrs })
     = if isNoHtml html && elem name validHtmlITags
-      then renderTag True name markupAttrs ""
-      else (renderTag False name markupAttrs ""
+      then renderTag True name attrs ""
+      else (renderTag False name attrs ""
             . foldr (.) id (map showHtml' (getHtmlElements html))
             . renderEndTag name "")
 
@@ -265,15 +265,15 @@ renderHtml' _ (HtmlString str) = (++) str
 renderHtml' n (HtmlTag
               { markupTag = name,
                 markupContent = html,
-                markupAttrs = markupAttrs })
+                markupAttrs = attrs })
       = if isNoHtml html && elem name validHtmlITags
-        then renderTag True name markupAttrs (nl n)
-        else (renderTag False name markupAttrs (nl n)
+        then renderTag True name attrs (nl n)
+        else (renderTag False name attrs (nl n)
              . foldr (.) id (map (renderHtml' (n+2)) (getHtmlElements html))
              . renderEndTag name (nl n))
     where
-      nl n = "\n" ++ replicate (n `div` 8) '\t' 
-             ++ replicate (n `mod` 8) ' '
+      nl n' = "\n" ++ replicate (n' `div` 8) '\t'
+              ++ replicate (n' `mod` 8) ' '
 
 
 prettyHtml' :: HtmlElement -> [String]
@@ -281,12 +281,12 @@ prettyHtml' (HtmlString str) = [str]
 prettyHtml' (HtmlTag
               { markupTag = name,
                 markupContent = html,
-                markupAttrs = markupAttrs })
+                markupAttrs = attrs })
       = if isNoHtml html && elem name validHtmlITags
         then 
-         [rmNL (renderTag True name markupAttrs "" "")]
+         [rmNL (renderTag True name attrs "" "")]
         else
-         [rmNL (renderTag False name markupAttrs "" "")] ++ 
+         [rmNL (renderTag False name attrs "" "")] ++ 
           shift (concat (map prettyHtml' (getHtmlElements html))) ++
          [rmNL (renderEndTag name "" "")]
   where
@@ -301,15 +301,15 @@ renderTag :: Bool       -- ^ 'True' if the empty tag shorthand should be used
 	  -> String     -- ^ Whitespace to add after attributes
 	  -> ShowS
 renderTag empty name attrs nl r
-      = "<" ++ name ++ showAttrs attrs ++ nl ++ close ++ r
+      = "<" ++ name ++ shownAttrs ++ nl ++ close ++ r
   where
       close = if empty then " />" else ">"
 
-      showAttrs attrs = concat [' ':showPair attr | attr <- attrs ]
+      shownAttrs = concat [' ':showPair attr | attr <- attrs ]
 
       showPair :: HtmlAttr -> String
-      showPair (HtmlAttr tag val)
-              = tag ++ "=\"" ++ val  ++ "\""
+      showPair (HtmlAttr key val)
+              = key ++ "=\"" ++ val  ++ "\""
 
 -- | Show an end tag
 renderEndTag :: String -- ^ Tag name

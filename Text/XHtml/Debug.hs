@@ -31,7 +31,7 @@ treeHtml colors h = table ! [
       treeHtmls c ts = aboves (zipWith treeHtml' c ts)
 
       treeHtml' :: [String] -> HtmlTree -> HtmlTable
-      treeHtml' (c:_) (HtmlLeaf leaf) = cell
+      treeHtml' _ (HtmlLeaf leaf) = cell
                                          (td ! [width "100%"] 
                                             << bold  
                                                << leaf)
@@ -86,19 +86,19 @@ debugHtml obj = table ! [border 0] <<
       debug (HtmlString str) = HtmlLeaf (spaceHtml +++
                                               linesToHtml (lines str))
       debug (HtmlTag {
-              markupTag = markupTag,
-              markupContent = markupContent,
-              markupAttrs  = markupAttrs
+              markupTag = tag',
+              markupContent = content',
+              markupAttrs  = attrs
               }) =
-              case markupContent of
+              case content' of
                 Html [] -> HtmlNode hd [] noHtml
                 Html xs -> HtmlNode hd (map debug xs) tl
         where
-              args = if null markupAttrs
+              args = if null attrs
                      then ""
-                     else "  " ++ unwords (map show markupAttrs) 
-              hd = xsmallFont << ("<" ++ markupTag ++ args ++ ">")
-              tl = xsmallFont << ("</" ++ markupTag ++ ">")
+                     else "  " ++ unwords (map show attrs)
+              hd = xsmallFont << ("<" ++ tag' ++ args ++ ">")
+              tl = xsmallFont << ("</" ++ tag' ++ ">")
 
 bgcolor' :: String -> HtmlAttr
 bgcolor' c = thestyle ("background-color:" ++ c)
