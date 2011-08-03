@@ -31,3 +31,4 @@ Other-modules:
   Text.XHtml.Extras,
   Text.XHtml.Internals
 ghc-options: -O2 -W
+Extensions: CPP

@@ -1,3 +1,8 @@
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 701
+{-# LANGUAGE Safe #-}
+#endif
+
 -- | Table combinators for XHTML.
 module Text.XHtml.Table (HtmlTable, HTMLTABLE(..),
                         (</>), above, (<->), beside, 
