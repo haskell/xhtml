@@ -1,8 +1,8 @@
+{-# OPTIONS_HADDOCK hide #-}
+-- #hide
 #if __GLASGOW_HASKELL__ >= 701
 {-# LANGUAGE Safe #-}
 #endif
-{-# OPTIONS_HADDOCK hide #-}
--- #hide
 
 module Text.XHtml.Transitional.Elements where
 
