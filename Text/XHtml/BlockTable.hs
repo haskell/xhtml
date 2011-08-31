@@ -8,9 +8,9 @@
 -- Copyright   :  (c) Andy Gill, and the Oregon Graduate Institute of 
 --                    Science and Technology, 1999-2001
 -- License     :  BSD-style (see the file LICENSE)
--- Maintainer  :  Bjorn Bringert <bjorn@bringert.net>
--- Stability   :  experimental
--- Portability :  portable
+-- Maintainer  :  Chris Dornan <chris@chrisdornan.com>
+-- Stability   :  Stable
+-- Portability :  Portable
 --
 -- An XHTML combinator library
 --

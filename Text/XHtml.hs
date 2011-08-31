@@ -9,9 +9,9 @@
 --                Science and Technology, 1999-2001,
 --                (c) Bjorn Bringert, 2004-2006
 -- License     :  BSD-style (see the file LICENSE)
--- Maintainer  :  Bjorn Bringert <bjorn@bringert.net>
--- Stability   :  experimental
--- Portability :  portable
+-- Maintainer  :  Chris Dornan <chris@chrisdornan.com>
+-- Stability   :  Stable
+-- Portability :  Portable
 --
 -- An XHTML combinator library.
 --
