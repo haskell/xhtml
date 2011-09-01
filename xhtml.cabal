@@ -1,12 +1,11 @@
 Name:               xhtml
-Version:            3000.2.0.3
-Copyright:          Bjorn Bringert 2004-2006, Andy Gill, and the Oregon Graduate 
-                    Institute of Science and Technology, 1999-2001
+Version:            3000.2.0.4
+Copyright:          Bjorn Bringert 2004-2006, Andy Gill and the Oregon
+                    Graduate Institute of Science and Technology, 1999-2001
 Maintainer:         Chris Dornan <chris@chrisdornan.com>
 Author:             Bjorn Bringert
 License:            BSD3
 License-file:       LICENSE
-Build-depends:      base >= 4.0 && < 4.5
 Synopsis:           An XHTML combinator library
 Description:        This package provides combinators for producing
                     XHTML 1.0, including the Strict, Transitional and
@@ -22,6 +21,7 @@ Source-repository head
     location:       git@github.com:haskell/xhtml.git
 
 library 
+    Build-depends:  base >= 4.0 && < 4.5
     Exposed-modules: 
                     Text.XHtml, 
                     Text.XHtml.Frameset,
