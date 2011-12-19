@@ -21,7 +21,7 @@ Source-repository head
     location:       git@github.com:haskell/xhtml.git
 
 library 
-    Build-depends:  base >= 4.0 && < 4.5
+    Build-depends:  base >= 4.0 && < 4.6
     Exposed-modules: 
                     Text.XHtml, 
                     Text.XHtml.Frameset,
