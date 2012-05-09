@@ -7,11 +7,11 @@ module Text.XHtml.Strict (
      -- * Data types
      Html, HtmlAttr,
      -- * Classes
-     HTML(..), ADDATTRS(..),
+     HTML(..), ADDATTRS(..), CHANGEATTRS(..),
      -- * Primitives and basic combinators
      (<<), concatHtml, (+++), 
      noHtml, isNoHtml, tag, itag,
-     emptyAttr, intAttr, strAttr, htmlAttr,
+     htmlAttrPair, emptyAttr, intAttr, strAttr, htmlAttr,
      primHtml, stringToHtmlString,
      docType,
      -- * Rendering

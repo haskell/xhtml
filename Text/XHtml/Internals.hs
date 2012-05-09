@@ -46,6 +46,10 @@ data HtmlElement
 data HtmlAttr = HtmlAttr String String
 
 
+htmlAttrPair :: HtmlAttr -> (String,String)
+htmlAttrPair (HtmlAttr n v) = (n,v)
+
+
 newtype Html = Html { getHtmlElements :: [HtmlElement] }
 
 
@@ -93,14 +97,28 @@ instance HTML a => HTML (Maybe a) where
 class ADDATTRS a where
       (!) :: a -> [HtmlAttr] -> a
 
+-- | CHANGEATTRS is a more expressive alternative to ADDATTRS
+class CHANGEATTRS a where
+      changeAttrs :: a -> ([HtmlAttr]->[HtmlAttr]) -> a
+
 instance (ADDATTRS b) => ADDATTRS (a -> b) where
-      fn ! attr = \ arg -> fn arg ! attr
+      fn ! attr        = \ arg -> fn arg ! attr
+
+instance (CHANGEATTRS b) => CHANGEATTRS (a -> b) where
+      changeAttrs fn f = \ arg -> changeAttrs (fn arg) f
 
 instance ADDATTRS Html where
       (Html htmls) ! attr = Html (map addAttrs htmls)
         where
               addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
-                              = html { markupAttrs = attrs ++ attr }
+                            = html { markupAttrs = attrs ++ attr }
+              addAttrs html = html
+
+instance CHANGEATTRS Html where
+      changeAttrs (Html htmls) f = Html (map addAttrs htmls)
+        where
+              addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
+                            = html { markupAttrs = f attrs }
               addAttrs html = html
 
 
