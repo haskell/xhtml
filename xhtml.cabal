@@ -18,7 +18,7 @@ Cabal-version:      >= 1.6
 
 Source-repository head
     type:           git
-    location:       https://github.com/haskell/xhtml
+    location:       git@github.com:haskell/xhtml.git
 
 library 
     Build-depends:  base >= 4.0 && < 5.0
