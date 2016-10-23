@@ -7,7 +7,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XHtml.internals
--- Copyright   :  (c) Andy Gill, and the Oregon Graduate Institute of 
+-- Copyright   :  (c) Andy Gill, and the Oregon Graduate Institute of
 --                Science and Technology, 1999-2001,
 --                (c) Bjorn Bringert, 2004-2006
 -- License     :  BSD-style (see the file LICENSE)
@@ -20,13 +20,15 @@
 module Text.XHtml.Internals where
 
 import Data.Char
+#if __GLASGOW_HASKELL__ <= 708
 import Data.Monoid
+#endif
 
 infixr 2 +++  -- combining Html
 infixr 7 <<   -- nesting Html
 infixl 8 !    -- adding optional arguments
 
--- 
+--
 -- * Data types
 --
 
@@ -35,7 +37,7 @@ infixl 8 !    -- adding optional arguments
 data HtmlElement
       = HtmlString String
         -- ^ ..just..plain..normal..text... but using &copy; and &amb;, etc.
-      | HtmlTag {                   
+      | HtmlTag {
               markupTag      :: String,
               markupAttrs    :: [HtmlAttr],
               markupContent  :: Html
@@ -53,7 +55,7 @@ htmlAttrPair (HtmlAttr n v) = (n,v)
 newtype Html = Html { getHtmlElements :: [HtmlElement] }
 
 
--- 
+--
 -- * Classes
 --
 
@@ -62,7 +64,7 @@ instance Show Html where
       showList htmls   = foldr (.) id (map shows htmls)
 
 instance Show HtmlAttr where
-      showsPrec _ (HtmlAttr str val) = 
+      showsPrec _ (HtmlAttr str val) =
               showString str .
               showString "=" .
               shows val
@@ -122,12 +124,12 @@ instance CHANGEATTRS Html where
               addAttrs html = html
 
 
--- 
+--
 -- * Html primitives and basic combinators
 --
 
 -- | Put something inside an HTML element.
-(<<) :: (HTML a) => 
+(<<) :: (HTML a) =>
         (Html -> b) -- ^ Parent
      -> a -- ^ Child
      -> b
@@ -179,13 +181,13 @@ htmlAttr s t = HtmlAttr s (show t)
 
 
 {-
-foldHtml :: (String -> [HtmlAttr] -> [a] -> a) 
+foldHtml :: (String -> [HtmlAttr] -> [a] -> a)
       -> (String -> a)
       -> Html
       -> a
-foldHtml f g (HtmlTag str attr fmls) 
-      = f str attr (map (foldHtml f g) fmls) 
-foldHtml f g (HtmlString  str)           
+foldHtml f g (HtmlTag str attr fmls)
+      = f str attr (map (foldHtml f g) fmls)
+foldHtml f g (HtmlString  str)
       = g str
 
 -}
@@ -202,8 +204,8 @@ stringToHtmlString = concatMap fixChar
       fixChar c = "&#" ++ show (ord c) ++ ";"
 
 
--- | This is not processed for special chars. 
--- use stringToHtml or lineToHtml instead, for user strings, 
+-- | This is not processed for special chars.
+-- use stringToHtml or lineToHtml instead, for user strings,
 -- because they understand special chars, like @'<'@.
 primHtml :: String -> Html
 primHtml x | null x    = Html []
@@ -211,7 +213,7 @@ primHtml x | null x    = Html []
 
 
 
--- 
+--
 -- * Html Rendering
 --
 
@@ -221,53 +223,53 @@ mkHtml = (tag "html" ! [strAttr "xmlns" "http://www.w3.org/1999/xhtml"] <<)
 -- | Output the HTML without adding newlines or spaces within the markup.
 --   This should be the most time and space efficient way to
 --   render HTML, though the ouput is quite unreadable.
-showHtmlInternal :: HTML html => 
+showHtmlInternal :: HTML html =>
                     String -- ^ DOCTYPE declaration
                  -> html -> String
-showHtmlInternal docType theHtml = 
+showHtmlInternal docType theHtml =
     docType ++ showHtmlFragment (mkHtml theHtml)
 
 -- | Outputs indented HTML. Because space matters in
 --   HTML, the output is quite messy.
-renderHtmlInternal :: HTML html => 
+renderHtmlInternal :: HTML html =>
                       String  -- ^ DOCTYPE declaration
                    -> html -> String
 renderHtmlInternal docType theHtml =
       docType ++ "\n" ++ renderHtmlFragment (mkHtml theHtml) ++ "\n"
 
 -- | Outputs indented HTML, with indentation inside elements.
---   This can change the meaning of the HTML document, and 
+--   This can change the meaning of the HTML document, and
 --   is mostly useful for debugging the HTML output.
 --   The implementation is inefficient, and you are normally
 --   better off using 'showHtml' or 'renderHtml'.
-prettyHtmlInternal :: HTML html => 
+prettyHtmlInternal :: HTML html =>
                       String -- ^ DOCTYPE declaration
                    -> html -> String
-prettyHtmlInternal docType theHtml = 
+prettyHtmlInternal docType theHtml =
     docType ++ "\n" ++ prettyHtmlFragment (mkHtml theHtml)
 
 -- | Render a piece of HTML without adding a DOCTYPE declaration
 --   or root element. Does not add any extra whitespace.
 showHtmlFragment :: HTML html => html -> String
-showHtmlFragment h = 
+showHtmlFragment h =
     (foldr (.) id $ map showHtml' $ getHtmlElements $ toHtml h) ""
 
 -- | Render a piece of indented HTML without adding a DOCTYPE declaration
 --   or root element. Only adds whitespace where it does not change
 --   the meaning of the document.
 renderHtmlFragment :: HTML html => html -> String
-renderHtmlFragment h = 
+renderHtmlFragment h =
     (foldr (.) id $ map (renderHtml' 0) $ getHtmlElements $ toHtml h) ""
 
--- | Render a piece of indented HTML without adding a DOCTYPE declaration 
+-- | Render a piece of indented HTML without adding a DOCTYPE declaration
 --   or a root element.
 --   The indentation is done inside elements.
---   This can change the meaning of the HTML document, and 
+--   This can change the meaning of the HTML document, and
 --   is mostly useful for debugging the HTML output.
 --   The implementation is inefficient, and you are normally
 --   better off using 'showHtmlFragment' or 'renderHtmlFragment'.
 prettyHtmlFragment :: HTML html => html -> String
-prettyHtmlFragment = 
+prettyHtmlFragment =
     unlines . concat . map prettyHtml' . getHtmlElements . toHtml
 
 -- | Show a single HTML element, without adding whitespace.
@@ -305,10 +307,10 @@ prettyHtml' (HtmlTag
                 markupContent = html,
                 markupAttrs = attrs })
       = if isNoHtml html && elem name validHtmlITags
-        then 
+        then
          [rmNL (renderTag True name attrs "" "")]
         else
-         [rmNL (renderTag False name attrs "" "")] ++ 
+         [rmNL (renderTag False name attrs "" "")] ++
           shift (concat (map prettyHtml' (getHtmlElements html))) ++
          [rmNL (renderEndTag name "" "")]
   where
@@ -318,10 +320,10 @@ prettyHtml' (HtmlTag
 
 -- | Show a start tag
 renderTag :: Bool       -- ^ 'True' if the empty tag shorthand should be used
-	  -> String     -- ^ Tag name
-	  -> [HtmlAttr] -- ^ Attributes
-	  -> String     -- ^ Whitespace to add after attributes
-	  -> ShowS
+          -> String     -- ^ Tag name
+          -> [HtmlAttr] -- ^ Attributes
+          -> String     -- ^ Whitespace to add after attributes
+          -> ShowS
 renderTag empty name attrs nl r
       = "<" ++ name ++ shownAttrs ++ nl ++ close ++ r
   where
@@ -335,8 +337,8 @@ renderTag empty name attrs nl r
 
 -- | Show an end tag
 renderEndTag :: String -- ^ Tag name
-	     -> String -- ^ Whitespace to add after tag name
-	     -> ShowS
+             -> String -- ^ Whitespace to add after tag name
+             -> ShowS
 renderEndTag name nl r = "</" ++ name ++ nl ++ ">" ++ r
 
 
@@ -344,17 +346,17 @@ renderEndTag name nl r = "</" ++ name ++ nl ++ ">" ++ r
 --   short-hand.
 validHtmlITags :: [String]
 validHtmlITags = [
-		  "area",
-		  "base",
-		  "basefont",
-		  "br",
+                  "area",
+                  "base",
+                  "basefont",
+                  "br",
                   "col",
                   "frame",
-		  "hr",
-		  "img",
-		  "input",
+                  "hr",
+                  "img",
+                  "input",
                   "isindex",
                   "link",
-		  "meta",
-		  "param"
-		 ]
+                  "meta",
+                  "param"
+                 ]
