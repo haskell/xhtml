@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_HADDOCK hide #-}
 
 -----------------------------------------------------------------------------
@@ -17,9 +16,7 @@
 module Text.XHtml.Internals where
 
 import Data.Char
-#if __GLASGOW_HASKELL__ <= 708
-import Data.Monoid
-#endif
+import qualified Data.Semigroup as Sem
 
 infixr 2 +++  -- combining Html
 infixr 7 <<   -- nesting Html
@@ -66,9 +63,13 @@ instance Show HtmlAttr where
               showString "=" .
               shows val
 
-instance Monoid Html where
+-- | @since 3000.2.2
+instance Sem.Semigroup Html where
+    (<>) = (+++)
+
+instance Sem.Monoid Html where
     mempty = noHtml
-    mappend = (+++)
+    mappend = (Sem.<>)
 
 -- | HTML is the class of things that can be validly put
 -- inside an HTML tag. So this can be one or more 'Html' elements,
