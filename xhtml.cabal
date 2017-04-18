@@ -13,15 +13,22 @@ Description:        This package provides combinators for producing
 Stability:          Stable
 Category:           Web, XML, Pretty Printer
 Homepage:           https://github.com/haskell/xhtml
+Bug-Reports:        https://github.com/haskell/xhtml/issues
 Build-type:         Simple
-Cabal-version:      >= 1.6
+Cabal-version:      >= 1.10
 
 Source-repository head
     type:           git
     location:       https://github.com/haskell/xhtml
 
 library
-    Build-depends:  base >= 4.0 && < 5.0
+    Default-Language: Haskell2010
+    Other-Extensions: CPP
+    if impl(ghc >= 7.2)
+        Default-Extensions: Safe
+
+    Build-depends:  base >= 4 && < 5
+
     Exposed-modules:
                     Text.XHtml,
                     Text.XHtml.Frameset,
@@ -41,4 +48,3 @@ library
                     Text.XHtml.Internals
 
     ghc-options:    -Wall -fwarn-tabs
-    Extensions:     CPP

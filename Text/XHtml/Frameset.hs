@@ -1,7 +1,3 @@
-#if __GLASGOW_HASKELL__ >= 701
-{-# LANGUAGE Safe #-}
-#endif
-
 -- | Produces XHTML 1.0 Frameset.
 module Text.XHtml.Frameset (
      -- * Data types

@@ -1,8 +1,4 @@
 {-# OPTIONS_HADDOCK hide #-}
--- #hide
-#if __GLASGOW_HASKELL__ >= 701
-{-# LANGUAGE Safe #-}
-#endif
 
 module Text.XHtml.Frameset.Elements where
 
