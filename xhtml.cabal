@@ -16,6 +16,7 @@ Homepage:           https://github.com/haskell/xhtml
 Bug-Reports:        https://github.com/haskell/xhtml/issues
 Build-type:         Simple
 Cabal-version:      >= 1.10
+extra-source-files: ChangeLog.md
 
 Source-repository head
     type:           git
