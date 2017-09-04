@@ -17,6 +17,7 @@ module Text.XHtml.Internals where
 
 import Data.Char
 import qualified Data.Semigroup as Sem
+import qualified Data.Monoid as Mon
 
 infixr 2 +++  -- combining Html
 infixr 7 <<   -- nesting Html
@@ -67,7 +68,7 @@ instance Show HtmlAttr where
 instance Sem.Semigroup Html where
     (<>) = (+++)
 
-instance Sem.Monoid Html where
+instance Mon.Monoid Html where
     mempty = noHtml
     mappend = (Sem.<>)
 
