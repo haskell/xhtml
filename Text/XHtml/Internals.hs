@@ -221,7 +221,7 @@ mkHtml = (tag "html" ! [strAttr "xmlns" "http://www.w3.org/1999/xhtml"] <<)
 
 -- | Output the HTML without adding newlines or spaces within the markup.
 --   This should be the most time and space efficient way to
---   render HTML, though the ouput is quite unreadable.
+--   render HTML, though the output is quite unreadable.
 showHtmlInternal :: HTML html =>
                     String -- ^ DOCTYPE declaration
                  -> html -> String

@@ -30,7 +30,7 @@ docType = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\""
 
 -- | Output the HTML without adding newlines or spaces within the markup.
 --   This should be the most time and space efficient way to
---   render HTML, though the ouput is quite unreadable.
+--   render HTML, though the output is quite unreadable.
 showHtml :: HTML html => html -> String
 showHtml = showHtmlInternal docType
 

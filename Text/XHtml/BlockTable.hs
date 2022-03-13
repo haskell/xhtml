@@ -10,7 +10,7 @@
 --
 -- An XHTML combinator library
 --
--- These combinators can be used to build formated 2D tables.
+-- These combinators can be used to build formatted 2D tables.
 -- The specific target usage is for HTML table generation.
 -----------------------------------------------------------------------------
 
