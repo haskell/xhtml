@@ -50,7 +50,7 @@ treeHtml colors h = table ! [
                  </> tl
         where
               -- This stops a column of colors being the same
-              -- color as the immeduately outside nesting bar.
+              -- color as the immediately outside nesting bar.
               morecolors = filter ((/= c).head) (manycolors cs)
               bar = td ! [bgcolor' c,width "10"] << spaceHtml
               hd = td ! [bgcolor' c] << hopen

@@ -67,7 +67,7 @@
 module Text.XHtml.BlockTable (
       -- * Datatypes
       BlockTable,
-      -- * Contruction Functions
+      -- * Construction Functions
       single,
       above,
       beside,
@@ -114,7 +114,7 @@ t1 `beside` t2 = combine t1 t2 (\ lst1 lst2 r ->
     let
       -- Note this depends on the fact that
       -- that the result has the same number
-      -- of lines as the y dimention; one list
+      -- of lines as the y dimension; one list
       -- per line. This is not true in general
       -- but is always true for these combinators.
       -- I should assert this!
