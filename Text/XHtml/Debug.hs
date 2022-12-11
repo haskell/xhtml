@@ -86,7 +86,7 @@ debugHtml obj = table ! [border 0] <<
   where
 
       debug' :: Html -> [HtmlTree]
-      debug' (Html markups) = map debug markups
+      debug' (Html markups) = map debug (markups [])
 
       debug :: HtmlElement -> HtmlTree
       debug (HtmlString str) = HtmlLeaf (spaceHtml +++
