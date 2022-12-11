@@ -1,4 +1,5 @@
 {-# OPTIONS_HADDOCK hide #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Text.XHtml.Frameset.Attributes where
 

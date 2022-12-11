@@ -1,3 +1,5 @@
+{-# language OverloadedStrings #-}
+
 -- | Produces XHTML 1.0 Strict.
 module Text.XHtml.Strict (
      -- * Data types
@@ -5,7 +7,7 @@ module Text.XHtml.Strict (
      -- * Classes
      HTML(..), ADDATTRS(..), CHANGEATTRS(..),
      -- * Primitives and basic combinators
-     (<<), concatHtml, (+++), 
+     (<<), concatHtml, (+++),
      noHtml, isNoHtml, tag, itag,
      htmlAttrPair, emptyAttr, intAttr, strAttr, htmlAttr,
      primHtml, stringToHtmlString,
@@ -24,19 +26,19 @@ import Text.XHtml.Strict.Attributes
 import Text.XHtml.Extras
 
 -- | The @DOCTYPE@ for XHTML 1.0 Strict.
-docType :: String
+docType :: Builder
 docType = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\""
-          ++ " \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
+          <> " \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
 
 -- | Output the HTML without adding newlines or spaces within the markup.
 --   This should be the most time and space efficient way to
 --   render HTML, though the output is quite unreadable.
-showHtml :: HTML html => html -> String
+showHtml :: HTML html => html -> Builder
 showHtml = showHtmlInternal docType
 
 -- | Outputs indented HTML. Because space matters in
 --   HTML, the output is quite messy.
-renderHtml :: HTML html => html -> String
+renderHtml :: HTML html => html -> Builder
 renderHtml = renderHtmlInternal docType
 
 -- | Outputs indented XHTML. Because space matters in
@@ -44,9 +46,9 @@ renderHtml = renderHtmlInternal docType
 renderHtmlWithLanguage :: HTML html
                        => String -- ^ The code of the "dominant" language of the webpage.
                        -> html -- ^ All the 'Html', including a header.
-                       -> String
+                       -> Builder
 renderHtmlWithLanguage l theHtml =
-    docType ++ "\n" ++ renderHtmlFragment code  ++ "\n"
+    docType <> "\n" <> renderHtmlFragment code  <> "\n"
   where
     code = tag "html" ! [ strAttr "xmlns" "http://www.w3.org/1999/xhtml"
                            , strAttr "lang" l
@@ -54,9 +56,9 @@ renderHtmlWithLanguage l theHtml =
                            ] << theHtml
 
 -- | Outputs indented HTML, with indentation inside elements.
---   This can change the meaning of the HTML document, and 
+--   This can change the meaning of the HTML document, and
 --   is mostly useful for debugging the HTML output.
 --   The implementation is inefficient, and you are normally
 --   better off using 'showHtml' or 'renderHtml'.
 prettyHtml :: HTML html => html -> String
-prettyHtml = prettyHtmlInternal docType
+prettyHtml = prettyHtmlInternal (builderToString docType)

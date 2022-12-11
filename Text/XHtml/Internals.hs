@@ -1,5 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
+{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XHtml.internals
@@ -13,11 +15,20 @@
 --
 -- Internals of the XHTML combinator library.
 -----------------------------------------------------------------------------
-module Text.XHtml.Internals where
+module Text.XHtml.Internals
+    ( module Text.XHtml.Internals
+    , Builder
+    ) where
 
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text as Text
+import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Builder
 import Data.Char
 import qualified Data.Semigroup as Sem
 import qualified Data.Monoid as Mon
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 infixr 2 +++  -- combining Html
 infixr 7 <<   -- nesting Html
@@ -30,39 +41,42 @@ infixl 8 !    -- adding optional arguments
 -- | A important property of Html is that all strings inside the
 -- structure are already in Html friendly format.
 data HtmlElement
-      = HtmlString String
+      = HtmlString !Builder
         -- ^ ..just..plain..normal..text... but using &copy; and &amb;, etc.
       | HtmlTag {
-              markupTag      :: String,
-              markupAttrs    :: [HtmlAttr],
-              markupContent  :: Html
+              markupTag      :: !Builder,
+              markupAttrs    :: ![HtmlAttr],
+              markupContent  :: !Html
               }
         -- ^ tag with internal markup
 
 -- | Attributes with name and value.
-data HtmlAttr = HtmlAttr String String
+data HtmlAttr = HtmlAttr !Builder !Builder
 
 
-htmlAttrPair :: HtmlAttr -> (String,String)
+htmlAttrPair :: HtmlAttr -> (Builder,Builder)
 htmlAttrPair (HtmlAttr n v) = (n,v)
 
 
 newtype Html = Html { getHtmlElements :: [HtmlElement] }
 
+builderToString :: Builder -> String
+builderToString =
+    Text.unpack . Text.decodeUtf8 . BSL.toStrict . toLazyByteString
 
 --
 -- * Classes
 --
 
 instance Show Html where
-      showsPrec _ html = showString (renderHtmlFragment html)
+      showsPrec _ html = showString (builderToString (renderHtmlFragment html))
       showList htmls   = foldr (.) id (map shows htmls)
 
 instance Show HtmlAttr where
       showsPrec _ (HtmlAttr str val) =
-              showString str .
+              showString (builderToString str) .
               showString "=" .
-              shows val
+              shows (builderToString val)
 
 -- | @since 3000.2.2
 instance Sem.Semigroup Html where
@@ -152,7 +166,7 @@ isNoHtml :: Html -> Bool
 isNoHtml (Html xs) = null xs
 
 -- | Constructs an element with a custom name.
-tag :: String -- ^ Element name
+tag :: Builder -- ^ Element name
     -> Html -- ^ Element contents
     -> Html
 tag str       htmls = Html [
@@ -163,20 +177,20 @@ tag str       htmls = Html [
 
 -- | Constructs an element with a custom name, and
 --   without any children.
-itag :: String -> Html
+itag :: Builder -> Html
 itag str = tag str noHtml
 
-emptyAttr :: String -> HtmlAttr
+emptyAttr :: Builder -> HtmlAttr
 emptyAttr s = HtmlAttr s s
 
-intAttr :: String -> Int -> HtmlAttr
-intAttr s i = HtmlAttr s (show i)
+intAttr :: Builder -> Int -> HtmlAttr
+intAttr s i = HtmlAttr s (intDec i)
 
-strAttr :: String -> String -> HtmlAttr
+strAttr :: Builder -> String -> HtmlAttr
 strAttr s t = HtmlAttr s (stringToHtmlString t)
 
-htmlAttr :: String -> Html -> HtmlAttr
-htmlAttr s t = HtmlAttr s (show t)
+htmlAttr :: Builder -> Html -> HtmlAttr
+htmlAttr s t = HtmlAttr s (renderHtmlFragment t)
 
 
 {-
@@ -192,24 +206,27 @@ foldHtml f g (HtmlString  str)
 -}
 
 -- | Processing Strings into Html friendly things.
-stringToHtmlString :: String -> String
-stringToHtmlString = concatMap fixChar
+stringToHtmlString :: String -> Builder
+stringToHtmlString = foldMap fixChar
     where
       fixChar '<' = "&lt;"
       fixChar '>' = "&gt;"
       fixChar '&' = "&amp;"
       fixChar '"' = "&quot;"
-      fixChar c | ord c < 0x80 = [c]
-      fixChar c = "&#" ++ show (ord c) ++ ";"
+      fixChar c | ord c < 0x80 = charUtf8 c
+      fixChar c = mconcat ["&#", intDec (ord c), charUtf8 ';']
 
 
 -- | This is not processed for special chars.
 -- use stringToHtml or lineToHtml instead, for user strings,
 -- because they understand special chars, like @'<'@.
 primHtml :: String -> Html
-primHtml x | null x    = Html []
-           | otherwise = Html [HtmlString x]
+primHtml x | null x    = Html mempty
+           | otherwise = Html $ pure $ HtmlString (stringUtf8 x)
 
+-- | Does not process special characters, or check to see if it is empty.
+primHtmlNonEmptyBuilder :: Builder -> Html
+primHtmlNonEmptyBuilder x = Html $ pure $ HtmlString x
 
 
 --
@@ -223,18 +240,18 @@ mkHtml = (tag "html" ! [strAttr "xmlns" "http://www.w3.org/1999/xhtml"] <<)
 --   This should be the most time and space efficient way to
 --   render HTML, though the output is quite unreadable.
 showHtmlInternal :: HTML html =>
-                    String -- ^ DOCTYPE declaration
-                 -> html -> String
+                    Builder -- ^ DOCTYPE declaration
+                 -> html -> Builder
 showHtmlInternal docType theHtml =
-    docType ++ showHtmlFragment (mkHtml theHtml)
+    docType <> showHtmlFragment (mkHtml theHtml)
 
 -- | Outputs indented HTML. Because space matters in
 --   HTML, the output is quite messy.
 renderHtmlInternal :: HTML html =>
-                      String  -- ^ DOCTYPE declaration
-                   -> html -> String
+                      Builder  -- ^ DOCTYPE declaration
+                   -> html -> Builder
 renderHtmlInternal docType theHtml =
-      docType ++ "\n" ++ renderHtmlFragment (mkHtml theHtml) ++ "\n"
+      docType <> "\n" <> renderHtmlFragment (mkHtml theHtml) <> "\n"
 
 -- | Outputs indented HTML, with indentation inside elements.
 --   This can change the meaning of the HTML document, and
@@ -249,16 +266,16 @@ prettyHtmlInternal docType theHtml =
 
 -- | Render a piece of HTML without adding a DOCTYPE declaration
 --   or root element. Does not add any extra whitespace.
-showHtmlFragment :: HTML html => html -> String
+showHtmlFragment :: HTML html => html -> Builder
 showHtmlFragment h =
-    (foldr (.) id $ map showHtml' $ getHtmlElements $ toHtml h) ""
+    foldMap showHtml' $ getHtmlElements $ toHtml h
 
 -- | Render a piece of indented HTML without adding a DOCTYPE declaration
 --   or root element. Only adds whitespace where it does not change
 --   the meaning of the document.
-renderHtmlFragment :: HTML html => html -> String
+renderHtmlFragment :: HTML html => html -> Builder
 renderHtmlFragment h =
-    (foldr (.) id $ map (renderHtml' 0) $ getHtmlElements $ toHtml h) ""
+    foldMap (renderHtml' 0) $ getHtmlElements $ toHtml h
 
 -- | Render a piece of indented HTML without adding a DOCTYPE declaration
 --   or a root element.
@@ -272,79 +289,83 @@ prettyHtmlFragment =
     unlines . concat . map prettyHtml' . getHtmlElements . toHtml
 
 -- | Show a single HTML element, without adding whitespace.
-showHtml' :: HtmlElement -> ShowS
-showHtml' (HtmlString str) = (++) str
+showHtml' :: HtmlElement -> Builder
+showHtml' (HtmlString str) = str
 showHtml'(HtmlTag { markupTag = name,
                     markupContent = html,
                     markupAttrs = attrs })
-    = if isNoHtml html && elem name validHtmlITags
+    = if isNoHtml html && isValidHtmlITag name
       then renderTag True name attrs ""
-      else (renderTag False name attrs ""
-            . foldr (.) id (map showHtml' (getHtmlElements html))
-            . renderEndTag name "")
+      else mconcat
+        [ renderTag False name attrs ""
+        , foldMap showHtml' (getHtmlElements html)
+        , renderEndTag name ""
+        ]
 
-renderHtml' :: Int -> HtmlElement -> ShowS
-renderHtml' _ (HtmlString str) = (++) str
+renderHtml' :: Int -> HtmlElement -> Builder
+renderHtml' _ (HtmlString str) = str
 renderHtml' n (HtmlTag
               { markupTag = name,
                 markupContent = html,
                 markupAttrs = attrs })
-      = if isNoHtml html && elem name validHtmlITags
+      = if isNoHtml html && isValidHtmlITag name
         then renderTag True name attrs (nl n)
-        else (renderTag False name attrs (nl n)
-             . foldr (.) id (map (renderHtml' (n+2)) (getHtmlElements html))
-             . renderEndTag name (nl n))
+        else renderTag False name attrs (nl n)
+          <> foldMap (renderHtml' (n+2)) (getHtmlElements html)
+          <> renderEndTag name (nl n)
     where
-      nl n' = "\n" ++ replicate (n' `div` 8) '\t'
-              ++ replicate (n' `mod` 8) ' '
+      nl n' = "\n" <> Sem.stimes (n' `div` 8) (charUtf8 '\t')
+              <> Sem.stimes (n' `mod` 8) (charUtf8 ' ')
 
 
 prettyHtml' :: HtmlElement -> [String]
-prettyHtml' (HtmlString str) = [str]
+prettyHtml' (HtmlString str) = [builderToString str]
 prettyHtml' (HtmlTag
               { markupTag = name,
                 markupContent = html,
                 markupAttrs = attrs })
-      = if isNoHtml html && elem name validHtmlITags
+      = if isNoHtml html && isValidHtmlITag name
         then
-         [rmNL (renderTag True name attrs "" "")]
+         [rmNL (renderTag True name attrs "")]
         else
-         [rmNL (renderTag False name attrs "" "")] ++
+         [rmNL (renderTag False name attrs "")] ++
           shift (concat (map prettyHtml' (getHtmlElements html))) ++
-         [rmNL (renderEndTag name "" "")]
+         [rmNL (renderEndTag name "")]
   where
       shift = map (\x -> "   " ++ x)
-      rmNL = filter (/= '\n')
+      rmNL = filter (/= '\n') . builderToString
 
 
 -- | Show a start tag
 renderTag :: Bool       -- ^ 'True' if the empty tag shorthand should be used
-          -> String     -- ^ Tag name
+          -> Builder     -- ^ Tag name
           -> [HtmlAttr] -- ^ Attributes
-          -> String     -- ^ Whitespace to add after attributes
-          -> ShowS
-renderTag empty name attrs nl r
-      = "<" ++ name ++ shownAttrs ++ nl ++ close ++ r
+          -> Builder     -- ^ Whitespace to add after attributes
+          -> Builder
+renderTag empty name attrs nl
+      = "<" <> name <> shownAttrs <> nl <> close
   where
       close = if empty then " />" else ">"
 
-      shownAttrs = concat [' ':showPair attr | attr <- attrs ]
+      shownAttrs = foldMap (\attr -> charUtf8 ' ' <> showPair attr) attrs
 
-      showPair :: HtmlAttr -> String
+      showPair :: HtmlAttr -> Builder
       showPair (HtmlAttr key val)
-              = key ++ "=\"" ++ val  ++ "\""
+              = key <> "=\"" <> val  <> "\""
 
 -- | Show an end tag
-renderEndTag :: String -- ^ Tag name
-             -> String -- ^ Whitespace to add after tag name
-             -> ShowS
-renderEndTag name nl r = "</" ++ name ++ nl ++ ">" ++ r
+renderEndTag :: Builder -- ^ Tag name
+             -> Builder -- ^ Whitespace to add after tag name
+             -> Builder
+renderEndTag name nl = "</" <> name <> nl <> ">"
 
+isValidHtmlITag :: Builder -> Bool
+isValidHtmlITag bldr = toLazyByteString bldr `Set.member` validHtmlITags
 
 -- | The names of all elements which can represented using the empty tag
 --   short-hand.
-validHtmlITags :: [String]
-validHtmlITags = [
+validHtmlITags :: Set BSL.ByteString
+validHtmlITags = Set.fromList [
                   "area",
                   "base",
                   "basefont",

@@ -1,5 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
+{-# LANGUAGE OverloadedStrings #-}
+
 module Text.XHtml.Strict.Attributes where
 
 import Text.XHtml.Internals

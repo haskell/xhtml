@@ -24,6 +24,11 @@ Source-repository head
 
 library
     Default-Language: Haskell2010
+    build-depends: 
+        bytestring
+      , text
+      , containers
+
     if impl(ghc >= 7.2)
         Default-Extensions: Safe
 

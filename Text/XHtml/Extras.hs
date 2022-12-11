@@ -11,14 +11,15 @@ import Text.XHtml.Strict.Attributes
 -- | Convert a 'String' to 'Html', converting
 --   characters that need to be escaped to HTML entities.
 stringToHtml :: String -> Html
-stringToHtml = primHtml . stringToHtmlString 
+stringToHtml = primHtml . builderToString . stringToHtmlString
 
 -- | This converts a string, but keeps spaces as non-line-breakable.
 lineToHtml :: String -> Html
-lineToHtml = primHtml . concatMap htmlizeChar2 . stringToHtmlString 
-   where 
-      htmlizeChar2 ' ' = "&nbsp;"
-      htmlizeChar2 c   = [c]
+lineToHtml =
+    primHtmlNonEmptyBuilder . stringToHtmlString . foldMap htmlizeChar2
+  where
+    htmlizeChar2 ' ' = "&nbsp;"
+    htmlizeChar2 c   = [c]
 
 -- | This converts a string, but keeps spaces as non-line-breakable,
 --   and adds line breaks between each of the strings in the input list.
@@ -76,7 +77,7 @@ hotlink url h = HotLink {
       hotLinkAttributes = [] }
 
 
--- 
+--
 -- * Lists
 --
 

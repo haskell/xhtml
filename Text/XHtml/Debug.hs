@@ -1,5 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
+{-# language OverloadedStrings #-}
+
 -- | This module contains functions for displaying
 --   HTML as a pretty tree.
 module Text.XHtml.Debug ( HtmlTree(..), treeHtml, treeColors, debugHtml ) where
@@ -36,13 +38,13 @@ treeHtml colors h = table ! [
 
       treeHtml' :: [String] -> HtmlTree -> HtmlTable
       treeHtml' _ (HtmlLeaf leaf) = cell
-                                         (td ! [width "100%"] 
-                                            << bold  
+                                         (td ! [width "100%"]
+                                            << bold
                                                << leaf)
       treeHtml' (c:cs@(c2:_)) (HtmlNode hopen ts hclose) =
           if null ts && isNoHtml hclose
           then
-              cell hd 
+              cell hd
           else if null ts
           then
               hd </> bar `beside` (td ! [bgcolor' c2] << spaceHtml)
@@ -67,7 +69,7 @@ treeColors :: [String]
 treeColors = ["#88ccff","#ffffaa","#ffaaff","#ccffff"] ++ treeColors
 
 
--- 
+--
 -- * Html Debugging Combinators
 --
 
@@ -75,10 +77,10 @@ treeColors = ["#88ccff","#ffffaa","#ffaaff","#ccffff"] ++ treeColors
 -- Html as a tree structure, allowing debugging of what is
 -- actually getting produced.
 debugHtml :: (HTML a) => a -> Html
-debugHtml obj = table ! [border 0] << 
+debugHtml obj = table ! [border 0] <<
                   ( th ! [bgcolor' "#008888"]
                      << underline'
-                       << "Debugging Output"
+                       << ("Debugging Output" :: String)
                </>  td << (toHtml (debug' (toHtml obj)))
               )
   where
@@ -88,7 +90,7 @@ debugHtml obj = table ! [border 0] <<
 
       debug :: HtmlElement -> HtmlTree
       debug (HtmlString str) = HtmlLeaf (spaceHtml +++
-                                              linesToHtml (lines str))
+                                              linesToHtml (lines (builderToString str)))
       debug (HtmlTag {
               markupTag = tag',
               markupContent = content',
@@ -100,9 +102,9 @@ debugHtml obj = table ! [border 0] <<
         where
               args = if null attrs
                      then ""
-                     else "  " ++ unwords (map show attrs)
-              hd = xsmallFont << ("<" ++ tag' ++ args ++ ">")
-              tl = xsmallFont << ("</" ++ tag' ++ ">")
+                     else "  " <> (unwords (map show attrs))
+              hd = xsmallFont << ("<" <> builderToString tag' <> args <> ">")
+              tl = xsmallFont << ("</" <> builderToString tag' <> ">")
 
 bgcolor' :: String -> HtmlAttr
 bgcolor' c = thestyle ("background-color:" ++ c)

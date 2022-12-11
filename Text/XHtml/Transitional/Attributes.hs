@@ -1,5 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
+{-# LANGUAGE OverloadedStrings #-}
+
 module Text.XHtml.Transitional.Attributes where
 
 import Text.XHtml.Internals
