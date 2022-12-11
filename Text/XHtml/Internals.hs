@@ -60,8 +60,8 @@ htmlAttrPair (HtmlAttr n v) = (n,v)
 
 
 data Html = Html
-    { unHtml :: !([HtmlElement] -> [HtmlElement])
-    , htmlIsEmpty :: {-# UNPACK #-} !Bool
+    { unHtml :: [HtmlElement] -> [HtmlElement]
+    , htmlIsEmpty :: Bool
     }
 
 getHtmlElements :: Html -> [HtmlElement]
