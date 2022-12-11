@@ -59,10 +59,10 @@ htmlAttrPair :: HtmlAttr -> (Builder,Builder)
 htmlAttrPair (HtmlAttr n v) = (n,v)
 
 
-newtype Html = Html { unHtml :: [HtmlElement] -> [HtmlElement] }
+newtype Html = Html { unHtml :: [HtmlElement] }
 
 getHtmlElements :: Html -> [HtmlElement]
-getHtmlElements html = unHtml html []
+getHtmlElements html = unHtml html
 
 builderToString :: Builder -> String
 builderToString =
@@ -97,15 +97,15 @@ class HTML a where
       toHtml     :: a -> Html
       toHtmlFromList :: [a] -> Html
 
-      toHtmlFromList xs = Html (foldr (\x acc -> unHtml (toHtml x) . acc) id xs)
+      toHtmlFromList xs = Html (concatMap (unHtml . toHtml) xs)
 
 instance HTML Html where
       toHtml a    = a
 
 instance HTML Char where
       toHtml       a = toHtml [a]
-      toHtmlFromList []  = Html id
-      toHtmlFromList str = Html (HtmlString (stringToHtmlString str) :)
+      toHtmlFromList []  = Html []
+      toHtmlFromList str = Html [HtmlString (stringToHtmlString str)]
 
 instance (HTML a) => HTML [a] where
       toHtml xs = toHtmlFromList xs
@@ -114,8 +114,8 @@ instance HTML a => HTML (Maybe a) where
       toHtml = maybe noHtml toHtml
 
 instance HTML Text where
-    toHtml "" = Html id
-    toHtml xs = Html (HtmlString (textToHtmlString xs) :)
+    toHtml "" = Html []
+    toHtml xs = Html [ HtmlString (textToHtmlString xs) ]
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
 mapDlist f as = (map f (as []) ++)
@@ -134,7 +134,7 @@ instance (CHANGEATTRS b) => CHANGEATTRS (a -> b) where
       changeAttrs fn f = \ arg -> changeAttrs (fn arg) f
 
 instance ADDATTRS Html where
-    (Html htmls) ! attr = Html (mapDlist addAttrs htmls)
+    (Html htmls) ! attr = Html (map addAttrs htmls)
       where
         addAttrs html =
             case html of
@@ -148,7 +148,7 @@ instance ADDATTRS Html where
 
 
 instance CHANGEATTRS Html where
-      changeAttrs (Html htmls) f = Html (mapDlist addAttrs htmls)
+      changeAttrs (Html htmls) f = Html (map addAttrs htmls)
         where
               addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
                             = html { markupAttrs = (f . attrs) }
@@ -168,22 +168,22 @@ fn << arg = fn (toHtml arg)
 
 
 concatHtml :: (HTML a) => [a] -> Html
-concatHtml = Html . foldr (.) id . map (unHtml . toHtml)
+concatHtml = Html . concatMap (unHtml . toHtml)
 
 -- | Create a piece of HTML which is the concatenation
 --   of two things which can be made into HTML.
 (+++) :: (HTML a, HTML b) => a -> b -> Html
-a +++ b = Html (unHtml (toHtml a) . unHtml (toHtml b))
+a +++ b = Html (unHtml (toHtml a) <> unHtml (toHtml b))
 
 
 -- | An empty piece of HTML.
 noHtml :: Html
-noHtml = Html id
+noHtml = Html []
 
 -- | Checks whether the given piece of HTML is empty. This materializes the
 -- list, so it's not great to do this a bunch.
 isNoHtml :: Html -> Bool
-isNoHtml (Html xs) = null (xs [])
+isNoHtml (Html xs) = null xs
 
 -- | Constructs an element with a custom name.
 tag :: Builder -- ^ Element name
@@ -191,14 +191,12 @@ tag :: Builder -- ^ Element name
     -> Html
 tag str htmls =
     Html
-        (
-        HtmlTag
-            { markupTag = str
-            , markupAttrs = id
-            , markupContent = htmls
-            }
-        :
-        )
+    [ HtmlTag
+        { markupTag = str
+        , markupAttrs = id
+        , markupContent = htmls
+        }
+    ]
 
 -- | Constructs an element with a custom name, and
 --   without any children.
@@ -249,12 +247,12 @@ textToHtmlString = Text.foldr (\c acc -> fixChar c <> acc) mempty
 -- use stringToHtml or lineToHtml instead, for user strings,
 -- because they understand special chars, like @'<'@.
 primHtml :: String -> Html
-primHtml x | null x    = Html id
-           | otherwise = Html (HtmlString (stringUtf8 x) :)
+primHtml x | null x    = Html []
+           | otherwise = Html [HtmlString (stringUtf8 x)]
 
 -- | Does not process special characters, or check to see if it is empty.
 primHtmlNonEmptyBuilder :: Builder -> Html
-primHtmlNonEmptyBuilder x = Html (HtmlString x :)
+primHtmlNonEmptyBuilder x = Html [HtmlString x]
 
 
 --
