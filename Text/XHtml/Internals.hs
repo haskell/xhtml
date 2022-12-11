@@ -170,17 +170,20 @@ fn << arg = fn (toHtml arg)
 
 concatHtml :: (HTML a) => [a] -> Html
 concatHtml = Html . foldr (.) id . map (unHtml . toHtml)
+{-# INLINABLE concatHtml #-}
 
 -- | Create a piece of HTML which is the concatenation
 --   of two things which can be made into HTML.
-(+++) :: (HTML a,HTML b) => a -> b -> Html
+(+++) :: (HTML a, HTML b) => a -> b -> Html
 a +++ b = Html (unHtml (toHtml a) . unHtml (toHtml b))
+{-# INLINABLE (+++) #-}
 
 -- | An empty piece of HTML.
 noHtml :: Html
 noHtml = Html id
 
--- | Checks whether the given piece of HTML is empty.
+-- | Checks whether the given piece of HTML is empty. This materializes the
+-- list, so it's not great to do this a bunch.
 isNoHtml :: Html -> Bool
 isNoHtml (Html xs) = null (xs [])
 
@@ -241,7 +244,7 @@ stringToHtmlString = foldMap fixChar
       fixChar c = mconcat ["&#", intDec (ord c), charUtf8 ';']
 
 textToHtmlString :: Text -> Builder
-textToHtmlString = Text.foldl' (\acc c -> acc <> fixChar c) mempty
+textToHtmlString = Text.foldr (\c acc -> fixChar c <> acc) mempty
   where
     fixChar '<' = "&lt;"
     fixChar '>' = "&gt;"
@@ -328,7 +331,7 @@ showHtml' (HtmlString str) = str
 showHtml'(HtmlTag { markupTag = name,
                     markupContent = html,
                     markupAttrs = attrs })
-    = if isNoHtml html && isValidHtmlITag name
+    = if isValidHtmlITag name && isNoHtml html
       then renderTag True name (attrs []) ""
       else mconcat
         [ renderTag False name (attrs []) ""
@@ -342,7 +345,7 @@ renderHtml' n (HtmlTag
               { markupTag = name,
                 markupContent = html,
                 markupAttrs = attrs })
-      = if isNoHtml html && isValidHtmlITag name
+      = if isValidHtmlITag name && isNoHtml html
         then renderTag True name (attrs []) (nl n)
         else renderTag False name (attrs []) (nl n)
           <> foldMap (renderHtml' (n+2)) (getHtmlElements html)
@@ -358,7 +361,7 @@ prettyHtml' (HtmlTag
               { markupTag = name,
                 markupContent = html,
                 markupAttrs = attrs })
-      = if isNoHtml html && isValidHtmlITag name
+      = if isValidHtmlITag name && isNoHtml html
         then
          [rmNL (renderTag True name (attrs []) "")]
         else
