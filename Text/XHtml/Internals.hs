@@ -59,10 +59,7 @@ htmlAttrPair :: HtmlAttr -> (Builder,Builder)
 htmlAttrPair (HtmlAttr n v) = (n,v)
 
 
-data Html = Html
-    { unHtml :: [HtmlElement] -> [HtmlElement]
-    , htmlIsEmpty :: Bool
-    }
+newtype Html = Html { unHtml :: [HtmlElement] -> [HtmlElement] }
 
 getHtmlElements :: Html -> [HtmlElement]
 getHtmlElements html = unHtml html []
@@ -100,21 +97,15 @@ class HTML a where
       toHtml     :: a -> Html
       toHtmlFromList :: [a] -> Html
 
-      toHtmlFromList [] =
-          Html { unHtml = id, htmlIsEmpty = True }
-      toHtmlFromList xs =
-          Html
-            { htmlIsEmpty = False
-            , unHtml = foldr (\x acc -> unHtml (toHtml x) . acc) id xs
-            }
+      toHtmlFromList xs = Html (foldr (\x acc -> unHtml (toHtml x) . acc) id xs)
 
 instance HTML Html where
       toHtml a    = a
 
 instance HTML Char where
       toHtml       a = toHtml [a]
-      toHtmlFromList []  = Html id True
-      toHtmlFromList str = Html (HtmlString (stringToHtmlString str) :) False
+      toHtmlFromList []  = Html id
+      toHtmlFromList str = Html (HtmlString (stringToHtmlString str) :)
 
 instance (HTML a) => HTML [a] where
       toHtml xs = toHtmlFromList xs
@@ -123,8 +114,8 @@ instance HTML a => HTML (Maybe a) where
       toHtml = maybe noHtml toHtml
 
 instance HTML Text where
-    toHtml "" = Html id True
-    toHtml xs = Html (HtmlString (textToHtmlString xs) :) False
+    toHtml "" = Html id
+    toHtml xs = Html (HtmlString (textToHtmlString xs) :)
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
 mapDlist f as = (map f (as []) ++)
@@ -143,9 +134,7 @@ instance (CHANGEATTRS b) => CHANGEATTRS (a -> b) where
       changeAttrs fn f = \ arg -> changeAttrs (fn arg) f
 
 instance ADDATTRS Html where
-    (Html htmls isEmpty) ! attr
-        | isEmpty = Html htmls isEmpty
-        | otherwise = Html (mapDlist addAttrs htmls) isEmpty
+    (Html htmls) ! attr = Html (mapDlist addAttrs htmls)
       where
         addAttrs html =
             case html of
@@ -159,9 +148,7 @@ instance ADDATTRS Html where
 
 
 instance CHANGEATTRS Html where
-      changeAttrs (Html htmls isEmpty) f
-        | isEmpty = (Html htmls isEmpty)
-        | otherwise = Html (mapDlist addAttrs htmls) isEmpty
+      changeAttrs (Html htmls) f = Html (mapDlist addAttrs htmls)
         where
               addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
                             = html { markupAttrs = (f . attrs) }
@@ -181,33 +168,22 @@ fn << arg = fn (toHtml arg)
 
 
 concatHtml :: (HTML a) => [a] -> Html
-concatHtml [] = Html id True
-concatHtml xs = Html (foldr (.) id . map (unHtml . toHtml) $ xs) False
+concatHtml = Html . foldr (.) id . map (unHtml . toHtml)
 
 -- | Create a piece of HTML which is the concatenation
 --   of two things which can be made into HTML.
 (+++) :: (HTML a, HTML b) => a -> b -> Html
-a +++ b =
-    case toHtml a of
-        Html k isEmpty
-            | isEmpty ->
-                toHtml b
-            | otherwise ->
-                case toHtml b of
-                    Html k' isEmpty'
-                        | isEmpty' ->
-                            Html k isEmpty
-                        | otherwise ->
-                            Html (k . k') False
+a +++ b = Html (unHtml (toHtml a) . unHtml (toHtml b))
+
 
 -- | An empty piece of HTML.
 noHtml :: Html
-noHtml = Html id True
+noHtml = Html id
 
 -- | Checks whether the given piece of HTML is empty. This materializes the
 -- list, so it's not great to do this a bunch.
 isNoHtml :: Html -> Bool
-isNoHtml (Html _ t) = t
+isNoHtml (Html xs) = null (xs [])
 
 -- | Constructs an element with a custom name.
 tag :: Builder -- ^ Element name
@@ -223,7 +199,6 @@ tag str htmls =
             }
         :
         )
-        False
 
 -- | Constructs an element with a custom name, and
 --   without any children.
@@ -274,12 +249,12 @@ textToHtmlString = Text.foldr (\c acc -> fixChar c <> acc) mempty
 -- use stringToHtml or lineToHtml instead, for user strings,
 -- because they understand special chars, like @'<'@.
 primHtml :: String -> Html
-primHtml x | null x    = Html id True
-           | otherwise = Html (HtmlString (stringUtf8 x) :) False
+primHtml x | null x    = Html id
+           | otherwise = Html (HtmlString (stringUtf8 x) :)
 
 -- | Does not process special characters, or check to see if it is empty.
 primHtmlNonEmptyBuilder :: Builder -> Html
-primHtmlNonEmptyBuilder x = Html (HtmlString x :) False
+primHtmlNonEmptyBuilder x = Html (HtmlString x :)
 
 
 --
