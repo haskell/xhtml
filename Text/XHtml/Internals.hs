@@ -101,21 +101,27 @@ class HTML a where
 
 instance HTML Html where
       toHtml a    = a
+      {-# INLINE toHtml #-}
 
 instance HTML Char where
       toHtml       a = toHtml [a]
+      {-# INLINE toHtml #-}
       toHtmlFromList []  = Html id
       toHtmlFromList str = Html (HtmlString (stringToHtmlString str) :)
+      {-# INLINE toHtmlFromList #-}
 
 instance (HTML a) => HTML [a] where
       toHtml xs = toHtmlFromList xs
+      {-# INLINE toHtml #-}
 
 instance HTML a => HTML (Maybe a) where
       toHtml = maybe noHtml toHtml
+      {-# INLINE toHtml #-}
 
 instance HTML Text where
     toHtml "" = Html id
     toHtml xs = Html (HtmlString (textToHtmlString xs) :)
+    {-# INLINE toHtml #-}
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
 mapDlist f as = (map f (as []) ++)
@@ -130,11 +136,14 @@ class CHANGEATTRS a where
 
 instance (ADDATTRS b) => ADDATTRS (a -> b) where
       fn ! attr        = \ arg -> fn arg ! attr
+      {-# INLINE (!) #-}
 
 instance (CHANGEATTRS b) => CHANGEATTRS (a -> b) where
       changeAttrs fn f = \ arg -> changeAttrs (fn arg) f
+      {-# INLINE changeAttrs #-}
 
 instance ADDATTRS Html where
+    {-# INLINE (!) #-}
     (Html htmls) ! attr = Html (mapDlist addAttrs htmls)
       where
         addAttrs html =
@@ -149,6 +158,7 @@ instance ADDATTRS Html where
 
 
 instance CHANGEATTRS Html where
+      {-# INLINE changeAttrs #-}
       changeAttrs (Html htmls) f = Html (mapDlist addAttrs htmls)
         where
               addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
@@ -166,6 +176,12 @@ instance CHANGEATTRS Html where
      -> a -- ^ Child
      -> b
 fn << arg = fn (toHtml arg)
+
+{-# SPECIALIZE (<<) :: (Html -> b) -> Html -> b #-}
+{-# SPECIALIZE (<<) :: (Html -> b) -> [Html] -> b #-}
+{-# SPECIALIZE (<<) :: (Html -> b) -> [Html] -> b #-}
+
+{-# INLINABLE (<<) #-}
 
 
 concatHtml :: (HTML a) => [a] -> Html
