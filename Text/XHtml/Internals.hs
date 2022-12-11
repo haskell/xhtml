@@ -233,24 +233,17 @@ foldHtml f g (HtmlString  str)
 -- | Processing Strings into Html friendly things.
 stringToHtmlString :: String -> Builder
 stringToHtmlString = foldMap fixChar
-    where
-      fixChar '<' = "&lt;"
-      fixChar '>' = "&gt;"
-      fixChar '&' = "&amp;"
-      fixChar '"' = "&quot;"
-      fixChar c | ord c < 0x80 = charUtf8 c
-      fixChar c = mconcat ["&#", intDec (ord c), charUtf8 ';']
+
+fixChar :: Char -> Builder
+fixChar '<' = "&lt;"
+fixChar '>' = "&gt;"
+fixChar '&' = "&amp;"
+fixChar '"' = "&quot;"
+fixChar c | ord c < 0x80 = charUtf8 c
+fixChar c = mconcat ["&#", intDec (ord c), charUtf8 ';']
 
 textToHtmlString :: Text -> Builder
 textToHtmlString = Text.foldr (\c acc -> fixChar c <> acc) mempty
-  where
-    fixChar '<' = "&lt;"
-    fixChar '>' = "&gt;"
-    fixChar '&' = "&amp;"
-    fixChar '"' = "&quot;"
-    fixChar c | ord c < 0x80 = charUtf8 c
-    fixChar c = mconcat ["&#", intDec (ord c), charUtf8 ';']
-
 
 -- | This is not processed for special chars.
 -- use stringToHtml or lineToHtml instead, for user strings,
