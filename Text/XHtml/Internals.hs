@@ -20,8 +20,8 @@ module Text.XHtml.Internals
     , Builder
     ) where
 
-import qualified Data.Text.Encoding as Text
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Builder
 import Data.Char
@@ -29,6 +29,7 @@ import qualified Data.Semigroup as Sem
 import qualified Data.Monoid as Mon
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (Text)
 
 infixr 2 +++  -- combining Html
 infixr 7 <<   -- nesting Html
@@ -103,7 +104,7 @@ instance HTML Html where
 
 instance HTML Char where
       toHtml       a = toHtml [a]
-      toHtmlFromList []  = Html mempty
+      toHtmlFromList []  = Html id
       toHtmlFromList str = Html (HtmlString (stringToHtmlString str) :)
 
 instance (HTML a) => HTML [a] where
@@ -111,6 +112,10 @@ instance (HTML a) => HTML [a] where
 
 instance HTML a => HTML (Maybe a) where
       toHtml = maybe noHtml toHtml
+
+instance HTML Text where
+    toHtml "" = Html id
+    toHtml xs = Html (HtmlString (textToHtmlString xs) :)
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
 mapDlist f as = (map f (as []) ++)
@@ -234,6 +239,16 @@ stringToHtmlString = foldMap fixChar
       fixChar '"' = "&quot;"
       fixChar c | ord c < 0x80 = charUtf8 c
       fixChar c = mconcat ["&#", intDec (ord c), charUtf8 ';']
+
+textToHtmlString :: Text -> Builder
+textToHtmlString = Text.foldl' (\acc c -> acc <> fixChar c) mempty
+  where
+    fixChar '<' = "&lt;"
+    fixChar '>' = "&gt;"
+    fixChar '&' = "&amp;"
+    fixChar '"' = "&quot;"
+    fixChar c | ord c < 0x80 = charUtf8 c
+    fixChar c = mconcat ["&#", intDec (ord c), charUtf8 ';']
 
 
 -- | This is not processed for special chars.
