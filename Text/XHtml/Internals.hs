@@ -119,7 +119,6 @@ instance HTML Text where
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
 mapDlist f as = (map f (as []) ++)
-{-# INLINE mapDlist #-}
 
 class ADDATTRS a where
       (!) :: a -> [HtmlAttr] -> a
@@ -170,13 +169,12 @@ fn << arg = fn (toHtml arg)
 
 concatHtml :: (HTML a) => [a] -> Html
 concatHtml = Html . foldr (.) id . map (unHtml . toHtml)
-{-# INLINABLE concatHtml #-}
 
 -- | Create a piece of HTML which is the concatenation
 --   of two things which can be made into HTML.
 (+++) :: (HTML a, HTML b) => a -> b -> Html
 a +++ b = Html (unHtml (toHtml a) . unHtml (toHtml b))
-{-# INLINABLE (+++) #-}
+
 
 -- | An empty piece of HTML.
 noHtml :: Html
