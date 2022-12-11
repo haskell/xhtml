@@ -86,7 +86,7 @@ debugHtml obj = table ! [border 0] <<
   where
 
       debug' :: Html -> [HtmlTree]
-      debug' (Html markups) = map debug markups
+      debug' (Html markups) = map debug (markups [])
 
       debug :: HtmlElement -> HtmlTree
       debug (HtmlString str) = HtmlLeaf (spaceHtml +++
@@ -94,12 +94,13 @@ debugHtml obj = table ! [border 0] <<
       debug (HtmlTag {
               markupTag = tag',
               markupContent = content',
-              markupAttrs  = attrs
+              markupAttrs  = mkAttrs
               }) =
-              case content' of
-                Html [] -> HtmlNode hd [] noHtml
-                Html xs -> HtmlNode hd (map debug xs) tl
+              if isNoHtml content'
+                then HtmlNode hd [] noHtml
+                else HtmlNode hd (map debug (getHtmlElements content')) tl
         where
+              attrs = mkAttrs []
               args = if null attrs
                      then ""
                      else "  " <> (unwords (map show attrs))

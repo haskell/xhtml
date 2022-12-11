@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, RecordWildCards #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -45,7 +45,7 @@ data HtmlElement
         -- ^ ..just..plain..normal..text... but using &copy; and &amb;, etc.
       | HtmlTag {
               markupTag      :: !Builder,
-              markupAttrs    :: ![HtmlAttr],
+              markupAttrs    :: !([HtmlAttr] -> [HtmlAttr]),
               markupContent  :: !Html
               }
         -- ^ tag with internal markup
@@ -58,7 +58,10 @@ htmlAttrPair :: HtmlAttr -> (Builder,Builder)
 htmlAttrPair (HtmlAttr n v) = (n,v)
 
 
-newtype Html = Html { getHtmlElements :: [HtmlElement] }
+newtype Html = Html { unHtml :: [HtmlElement] -> [HtmlElement] }
+
+getHtmlElements :: Html -> [HtmlElement]
+getHtmlElements html = unHtml html []
 
 builderToString :: Builder -> String
 builderToString =
@@ -93,15 +96,15 @@ class HTML a where
       toHtml     :: a -> Html
       toHtmlFromList :: [a] -> Html
 
-      toHtmlFromList xs = Html (concat [ x | (Html x) <- map toHtml xs])
+      toHtmlFromList xs = Html (foldr (\x acc -> unHtml (toHtml x) . acc) id xs)
 
 instance HTML Html where
       toHtml a    = a
 
 instance HTML Char where
       toHtml       a = toHtml [a]
-      toHtmlFromList []  = Html []
-      toHtmlFromList str = Html [HtmlString (stringToHtmlString str)]
+      toHtmlFromList []  = Html mempty
+      toHtmlFromList str = Html (HtmlString (stringToHtmlString str) :)
 
 instance (HTML a) => HTML [a] where
       toHtml xs = toHtmlFromList xs
@@ -109,12 +112,16 @@ instance (HTML a) => HTML [a] where
 instance HTML a => HTML (Maybe a) where
       toHtml = maybe noHtml toHtml
 
+mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
+mapDlist f as = (map f (as []) ++)
+{-# INLINE mapDlist #-}
+
 class ADDATTRS a where
       (!) :: a -> [HtmlAttr] -> a
 
 -- | CHANGEATTRS is a more expressive alternative to ADDATTRS
 class CHANGEATTRS a where
-      changeAttrs :: a -> ([HtmlAttr]->[HtmlAttr]) -> a
+      changeAttrs :: a -> ([HtmlAttr] -> [HtmlAttr]) -> a
 
 instance (ADDATTRS b) => ADDATTRS (a -> b) where
       fn ! attr        = \ arg -> fn arg ! attr
@@ -123,17 +130,24 @@ instance (CHANGEATTRS b) => CHANGEATTRS (a -> b) where
       changeAttrs fn f = \ arg -> changeAttrs (fn arg) f
 
 instance ADDATTRS Html where
-      (Html htmls) ! attr = Html (map addAttrs htmls)
-        where
-              addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
-                            = html { markupAttrs = attrs ++ attr }
-              addAttrs html = html
+    (Html htmls) ! attr = Html (mapDlist addAttrs htmls)
+      where
+        addAttrs html =
+            case html of
+                HtmlTag { markupAttrs = attrs, .. } ->
+                    HtmlTag
+                        { markupAttrs = attrs . (++ attr)
+                        , ..
+                        }
+                _ ->
+                    html
+
 
 instance CHANGEATTRS Html where
-      changeAttrs (Html htmls) f = Html (map addAttrs htmls)
+      changeAttrs (Html htmls) f = Html (mapDlist addAttrs htmls)
         where
               addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
-                            = html { markupAttrs = f attrs }
+                            = html { markupAttrs = (f . attrs) }
               addAttrs html = html
 
 
@@ -150,30 +164,35 @@ fn << arg = fn (toHtml arg)
 
 
 concatHtml :: (HTML a) => [a] -> Html
-concatHtml as = Html (concat (map (getHtmlElements.toHtml) as))
+concatHtml = Html . foldr (.) id . map (unHtml . toHtml)
 
 -- | Create a piece of HTML which is the concatenation
 --   of two things which can be made into HTML.
 (+++) :: (HTML a,HTML b) => a -> b -> Html
-a +++ b = Html (getHtmlElements (toHtml a) ++ getHtmlElements (toHtml b))
+a +++ b = Html (unHtml (toHtml a) . unHtml (toHtml b))
 
 -- | An empty piece of HTML.
 noHtml :: Html
-noHtml = Html []
+noHtml = Html id
 
 -- | Checks whether the given piece of HTML is empty.
 isNoHtml :: Html -> Bool
-isNoHtml (Html xs) = null xs
+isNoHtml (Html xs) = null (xs [])
 
 -- | Constructs an element with a custom name.
 tag :: Builder -- ^ Element name
     -> Html -- ^ Element contents
     -> Html
-tag str       htmls = Html [
-      HtmlTag {
-              markupTag = str,
-              markupAttrs = [],
-              markupContent = htmls }]
+tag str htmls =
+    Html
+        (
+        HtmlTag
+            { markupTag = str
+            , markupAttrs = id
+            , markupContent = htmls
+            }
+        :
+        )
 
 -- | Constructs an element with a custom name, and
 --   without any children.
@@ -221,12 +240,12 @@ stringToHtmlString = foldMap fixChar
 -- use stringToHtml or lineToHtml instead, for user strings,
 -- because they understand special chars, like @'<'@.
 primHtml :: String -> Html
-primHtml x | null x    = Html mempty
-           | otherwise = Html $ pure $ HtmlString (stringUtf8 x)
+primHtml x | null x    = Html id
+           | otherwise = Html (HtmlString (stringUtf8 x) :)
 
 -- | Does not process special characters, or check to see if it is empty.
 primHtmlNonEmptyBuilder :: Builder -> Html
-primHtmlNonEmptyBuilder x = Html $ pure $ HtmlString x
+primHtmlNonEmptyBuilder x = Html (HtmlString x :)
 
 
 --
@@ -295,9 +314,9 @@ showHtml'(HtmlTag { markupTag = name,
                     markupContent = html,
                     markupAttrs = attrs })
     = if isNoHtml html && isValidHtmlITag name
-      then renderTag True name attrs ""
+      then renderTag True name (attrs []) ""
       else mconcat
-        [ renderTag False name attrs ""
+        [ renderTag False name (attrs []) ""
         , foldMap showHtml' (getHtmlElements html)
         , renderEndTag name ""
         ]
@@ -309,8 +328,8 @@ renderHtml' n (HtmlTag
                 markupContent = html,
                 markupAttrs = attrs })
       = if isNoHtml html && isValidHtmlITag name
-        then renderTag True name attrs (nl n)
-        else renderTag False name attrs (nl n)
+        then renderTag True name (attrs []) (nl n)
+        else renderTag False name (attrs []) (nl n)
           <> foldMap (renderHtml' (n+2)) (getHtmlElements html)
           <> renderEndTag name (nl n)
     where
@@ -326,9 +345,9 @@ prettyHtml' (HtmlTag
                 markupAttrs = attrs })
       = if isNoHtml html && isValidHtmlITag name
         then
-         [rmNL (renderTag True name attrs "")]
+         [rmNL (renderTag True name (attrs []) "")]
         else
-         [rmNL (renderTag False name attrs "")] ++
+         [rmNL (renderTag False name (attrs []) "")] ++
           shift (concat (map prettyHtml' (getHtmlElements html))) ++
          [rmNL (renderEndTag name "")]
   where
