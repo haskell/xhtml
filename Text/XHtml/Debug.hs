@@ -11,6 +11,7 @@ import Text.XHtml.Extras
 import Text.XHtml.Table
 import Text.XHtml.Strict.Elements
 import Text.XHtml.Strict.Attributes
+import Data.Foldable (toList)
 
 import Data.List (uncons)
 
@@ -85,8 +86,8 @@ debugHtml obj = table ! [border 0] <<
               )
   where
 
-      debug' :: Html -> [HtmlTree]
-      debug' (Html markups) = map debug (markups [])
+      debug' :: Html -> Seq HtmlTree
+      debug' (Html markups) = fmap debug markups
 
       debug :: HtmlElement -> HtmlTree
       debug (HtmlString str) = HtmlLeaf (spaceHtml +++
@@ -98,7 +99,7 @@ debugHtml obj = table ! [border 0] <<
               }) =
               if isNoHtml content'
                 then HtmlNode hd [] noHtml
-                else HtmlNode hd (map debug (getHtmlElements content')) tl
+                else HtmlNode hd (toList $ fmap debug (getHtmlElements content')) tl
         where
               attrs = mkAttrs []
               args = if null attrs
