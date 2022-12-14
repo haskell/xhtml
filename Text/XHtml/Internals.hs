@@ -18,7 +18,6 @@
 module Text.XHtml.Internals
     ( module Text.XHtml.Internals
     , Builder
-    , Seq
     ) where
 
 import qualified Data.Text as Text
@@ -31,9 +30,6 @@ import qualified Data.Monoid as Mon
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import qualified Data.Sequence as Seq
-import Data.Sequence (Seq)
-import Data.Foldable (toList)
 
 infixr 2 +++  -- combining Html
 infixr 7 <<   -- nesting Html
@@ -63,10 +59,10 @@ htmlAttrPair :: HtmlAttr -> (Builder,Builder)
 htmlAttrPair (HtmlAttr n v) = (n,v)
 
 
-newtype Html = Html { unHtml :: Seq HtmlElement }
+newtype Html = Html { unHtml :: [HtmlElement] -> [HtmlElement] }
 
-getHtmlElements :: Html -> Seq HtmlElement
-getHtmlElements = unHtml
+getHtmlElements :: Html -> [HtmlElement]
+getHtmlElements html = unHtml html []
 
 builderToString :: Builder -> String
 builderToString =
@@ -88,7 +84,7 @@ instance Show HtmlAttr where
 
 -- | @since 3000.2.2
 instance Sem.Semigroup Html where
-    Html a <> Html b = Html (a <> b)
+    (<>) = (+++)
 
 instance Mon.Monoid Html where
     mempty = noHtml
@@ -101,28 +97,25 @@ class HTML a where
       toHtml     :: a -> Html
       toHtmlFromList :: [a] -> Html
 
-      toHtmlFromList xs = Html (foldr (\x acc -> unHtml (toHtml x) <> acc) mempty xs)
+      toHtmlFromList xs = Html (foldr (\x acc -> unHtml (toHtml x) . acc) id xs)
 
 instance HTML Html where
       toHtml a    = a
 
 instance HTML Char where
       toHtml       a = toHtml [a]
-      toHtmlFromList []  = Html mempty
-      toHtmlFromList str = Html (pure (HtmlString (stringToHtmlString str)))
+      toHtmlFromList []  = Html id
+      toHtmlFromList str = Html (HtmlString (stringToHtmlString str) :)
 
 instance (HTML a) => HTML [a] where
       toHtml xs = toHtmlFromList xs
-
-instance (HTML a) => HTML (Seq a) where
-    toHtml xs = toHtmlFromList (toList xs)
 
 instance HTML a => HTML (Maybe a) where
       toHtml = maybe noHtml toHtml
 
 instance HTML Text where
-    toHtml "" = Html mempty
-    toHtml xs = Html (pure (HtmlString (textToHtmlString xs)))
+    toHtml "" = Html id
+    toHtml xs = Html (HtmlString (textToHtmlString xs) :)
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
 mapDlist f as = (map f (as []) ++)
@@ -141,7 +134,7 @@ instance (CHANGEATTRS b) => CHANGEATTRS (a -> b) where
       changeAttrs fn f = \ arg -> changeAttrs (fn arg) f
 
 instance ADDATTRS Html where
-    (Html htmls) ! attr = Html (fmap addAttrs htmls)
+    (Html htmls) ! attr = Html (mapDlist addAttrs htmls)
       where
         addAttrs html =
             case html of
@@ -155,7 +148,7 @@ instance ADDATTRS Html where
 
 
 instance CHANGEATTRS Html where
-      changeAttrs (Html htmls) f = Html (fmap addAttrs htmls)
+      changeAttrs (Html htmls) f = Html (mapDlist addAttrs htmls)
         where
               addAttrs (html@(HtmlTag { markupAttrs = attrs }) )
                             = html { markupAttrs = (f . attrs) }
@@ -175,34 +168,37 @@ fn << arg = fn (toHtml arg)
 
 
 concatHtml :: (HTML a) => [a] -> Html
-concatHtml = Html . foldMap (unHtml . toHtml)
+concatHtml = Html . foldr (.) id . map (unHtml . toHtml)
 
 -- | Create a piece of HTML which is the concatenation
 --   of two things which can be made into HTML.
 (+++) :: (HTML a, HTML b) => a -> b -> Html
-a +++ b = toHtml a <> toHtml b
+a +++ b = Html (unHtml (toHtml a) . unHtml (toHtml b))
 
 
 -- | An empty piece of HTML.
 noHtml :: Html
-noHtml = Html mempty
+noHtml = Html id
 
 -- | Checks whether the given piece of HTML is empty. This materializes the
 -- list, so it's not great to do this a bunch.
 isNoHtml :: Html -> Bool
-isNoHtml (Html xs) = Seq.null xs
+isNoHtml (Html xs) = null (xs [])
 
 -- | Constructs an element with a custom name.
 tag :: Builder -- ^ Element name
     -> Html -- ^ Element contents
     -> Html
 tag str htmls =
-    Html $
-        pure HtmlTag
+    Html
+        (
+        HtmlTag
             { markupTag = str
             , markupAttrs = id
             , markupContent = htmls
             }
+        :
+        )
 
 -- | Constructs an element with a custom name, and
 --   without any children.
@@ -253,12 +249,12 @@ textToHtmlString = Text.foldr (\c acc -> fixChar c <> acc) mempty
 -- use stringToHtml or lineToHtml instead, for user strings,
 -- because they understand special chars, like @'<'@.
 primHtml :: String -> Html
-primHtml x | null x    = Html mempty
-           | otherwise = Html (pure (HtmlString (stringUtf8 x)))
+primHtml x | null x    = Html id
+           | otherwise = Html (HtmlString (stringUtf8 x) :)
 
 -- | Does not process special characters, or check to see if it is empty.
 primHtmlNonEmptyBuilder :: Builder -> Html
-primHtmlNonEmptyBuilder x = Html (pure $ HtmlString x)
+primHtmlNonEmptyBuilder x = Html (HtmlString x :)
 
 
 --
@@ -318,7 +314,7 @@ renderHtmlFragment h =
 --   better off using 'showHtmlFragment' or 'renderHtmlFragment'.
 prettyHtmlFragment :: HTML html => html -> String
 prettyHtmlFragment =
-    unlines . toList . foldMap prettyHtml' . getHtmlElements . toHtml
+    unlines . concat . map prettyHtml' . getHtmlElements . toHtml
 
 -- | Show a single HTML element, without adding whitespace.
 showHtml' :: HtmlElement -> Builder
@@ -361,7 +357,7 @@ prettyHtml' (HtmlTag
          [rmNL (renderTag True name (attrs []) "")]
         else
          [rmNL (renderTag False name (attrs []) "")] ++
-          shift (foldMap prettyHtml' (getHtmlElements html)) ++
+          shift (concat (map prettyHtml' (getHtmlElements html))) ++
          [rmNL (renderEndTag name "")]
   where
       shift = map (\x -> "   " ++ x)
