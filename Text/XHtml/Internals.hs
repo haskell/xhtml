@@ -140,7 +140,7 @@ instance ADDATTRS Html where
             case html of
                 HtmlTag { markupAttrs = attrs, .. } ->
                     HtmlTag
-                        { markupAttrs = attrs . (++ attr)
+                        { markupAttrs = attrs . (attr ++)
                         , ..
                         }
                 _ ->
