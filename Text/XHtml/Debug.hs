@@ -1,5 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
+{-# language OverloadedStrings #-}
+
 -- | This module contains functions for displaying
 --   HTML as a pretty tree.
 module Text.XHtml.Debug ( HtmlTree(..), treeHtml, treeColors, debugHtml ) where
@@ -9,6 +11,7 @@ import Text.XHtml.Extras
 import Text.XHtml.Table
 import Text.XHtml.Strict.Elements
 import Text.XHtml.Strict.Attributes
+import qualified Data.Text.Lazy as LText
 
 import Data.List (uncons)
 
@@ -23,51 +26,47 @@ data HtmlTree
       = HtmlLeaf Html
       | HtmlNode Html [HtmlTree] Html
 
-treeHtml :: [String] -> HtmlTree -> Html
-treeHtml colors h = table ! [
-                    border 0,
-                    cellpadding 0,
-                    cellspacing 2] << treeHtml' colors h
-     where
-      manycolors = scanr (:) []
+treeHtml :: [LText.Text] -> HtmlTree -> Html
+treeHtml colors h =
+    table !
+      [ border 0,
+        cellpadding 0,
+        cellspacing 2
+      ]
+      << treeHtml' colors h
+  where
+    manycolors = scanr (:) []
 
-      treeHtmls :: [[String]] -> [HtmlTree] -> HtmlTable
-      treeHtmls c ts = aboves (zipWith treeHtml' c ts)
+    treeHtmls :: [[LText.Text]] -> [HtmlTree] -> HtmlTable
+    treeHtmls c ts = aboves (zipWith treeHtml' c ts)
 
-      treeHtml' :: [String] -> HtmlTree -> HtmlTable
-      treeHtml' _ (HtmlLeaf leaf) = cell
-                                         (td ! [width "100%"] 
-                                            << bold  
-                                               << leaf)
-      treeHtml' (c:cs@(c2:_)) (HtmlNode hopen ts hclose) =
-          if null ts && isNoHtml hclose
-          then
-              cell hd 
-          else if null ts
-          then
-              hd </> bar `beside` (td ! [bgcolor' c2] << spaceHtml)
-                 </> tl
-          else
-              hd </> (bar `beside` treeHtmls morecolors ts)
-                 </> tl
-        where
-              -- This stops a column of colors being the same
-              -- color as the immediately outside nesting bar.
-              morecolors = filter (maybe True ((/= c) . fst) . uncons) (manycolors cs)
-              bar = td ! [bgcolor' c,width "10"] << spaceHtml
-              hd = td ! [bgcolor' c] << hopen
-              tl = td ! [bgcolor' c] << hclose
-      treeHtml' _ _ = error "The imposible happens"
+    treeHtml' :: [LText.Text] -> HtmlTree -> HtmlTable
+    treeHtml' _ (HtmlLeaf leaf) = cell
+                                        (td ! [width "100%"]
+                                          << bold
+                                              << leaf)
+    treeHtml' (c:cs@(c2:_)) (HtmlNode hopen ts hclose)
+        | null ts && isNoHtml hclose = cell hd
+        | null ts = hd </> bar `beside` (td ! [bgcolor' c2] << spaceHtml) </> tl
+        | otherwise = hd </> (bar `beside` treeHtmls morecolors ts) </> tl
+      where
+        -- This stops a column of colors being the same
+        -- color as the immediately outside nesting bar.
+        morecolors = filter (maybe True ((/= c) . fst) . uncons) (manycolors cs)
+        bar = td ! [bgcolor' c,width "10"] << spaceHtml
+        hd = td ! [bgcolor' c] << hopen
+        tl = td ! [bgcolor' c] << hclose
+    treeHtml' _ _ = error "The imposible happens"
 
 instance HTML HtmlTree where
-      toHtml x = treeHtml treeColors x
+      toHtml = treeHtml treeColors
 
 -- type "length treeColors" to see how many colors are here.
-treeColors :: [String]
+treeColors :: [LText.Text]
 treeColors = ["#88ccff","#ffffaa","#ffaaff","#ccffff"] ++ treeColors
 
 
--- 
+--
 -- * Html Debugging Combinators
 --
 
@@ -75,40 +74,41 @@ treeColors = ["#88ccff","#ffffaa","#ffaaff","#ccffff"] ++ treeColors
 -- Html as a tree structure, allowing debugging of what is
 -- actually getting produced.
 debugHtml :: (HTML a) => a -> Html
-debugHtml obj = table ! [border 0] << 
+debugHtml obj = table ! [border 0] <<
                   ( th ! [bgcolor' "#008888"]
                      << underline'
-                       << "Debugging Output"
-               </>  td << (toHtml (debug' (toHtml obj)))
+                       << ("Debugging Output" :: String)
+               </>  td << toHtml (debug' (toHtml obj))
               )
   where
 
       debug' :: Html -> [HtmlTree]
-      debug' (Html markups) = map debug markups
+      debug' (Html markups) = map debug (markups [])
 
       debug :: HtmlElement -> HtmlTree
       debug (HtmlString str) = HtmlLeaf (spaceHtml +++
-                                              linesToHtml (lines str))
+                                              linesToHtml (lines (builderToString str)))
       debug (HtmlTag {
               markupTag = tag',
               markupContent = content',
-              markupAttrs  = attrs
+              markupAttrs  = mkAttrs
               }) =
-              case content' of
-                Html [] -> HtmlNode hd [] noHtml
-                Html xs -> HtmlNode hd (map debug xs) tl
+              if isNoHtml content'
+                then HtmlNode hd [] noHtml
+                else HtmlNode hd (map debug (getHtmlElements content')) tl
         where
+              attrs = mkAttrs []
               args = if null attrs
                      then ""
-                     else "  " ++ unwords (map show attrs)
-              hd = xsmallFont << ("<" ++ tag' ++ args ++ ">")
-              tl = xsmallFont << ("</" ++ tag' ++ ">")
+                     else "  " <> unwords (map show attrs)
+              hd = xsmallFont << ("<" <> builderToString tag' <> args <> ">")
+              tl = xsmallFont << ("</" <> builderToString tag' <> ">")
 
-bgcolor' :: String -> HtmlAttr
-bgcolor' c = thestyle ("background-color:" ++ c)
+bgcolor' :: LText.Text -> HtmlAttr
+bgcolor' c = thestyle ("background-color:" <> c)
 
 underline' :: Html -> Html
-underline' = thespan ! [thestyle ("text-decoration:underline")]
+underline' = thespan ! [thestyle "text-decoration:underline"]
 
 xsmallFont :: Html -> Html
-xsmallFont  = thespan ! [thestyle ("font-size:x-small")]
+xsmallFont  = thespan ! [thestyle "font-size:x-small"]

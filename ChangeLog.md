@@ -1,3 +1,9 @@
+## 3000.3.0.0
+
+- The internal representation has changed from `String` and `[String]` to a
+  `Data.ByteString.Builder` and difference lists.
+  [#19](https://github.com/haskell/xhtml/pull/19)
+
 ## 3000.2.2.1
 
 - Special release which supports *only* `base >= 4.11`

@@ -1,6 +1,6 @@
 Cabal-version:      >= 1.10
 Name:               xhtml
-Version:            3000.2.2.1
+Version:            3000.3.0.0
 Copyright:          Bjorn Bringert 2004-2006, Andy Gill and the Oregon
                     Graduate Institute of Science and Technology, 1999-2001
 Maintainer:         Chris Dornan <chris@chrisdornan.com>
@@ -24,13 +24,17 @@ Source-repository head
 
 library
     Default-Language: Haskell2010
-    if impl(ghc >= 7.2)
-        Default-Extensions: Safe
+    build-depends:
+        bytestring
+      , containers
+      , text
 
     Build-depends: base >= 4 && < 5
     if impl(ghc >= 8.0)
         -- Enable warnings about potential future incompatibilities
-        ghc-options: -Wcompat -Wnoncanonical-monadfail-instances -Wnoncanonical-monad-instances
+        ghc-options:
+          -Wcompat
+          -Wnoncanonical-monad-instances
     else
         -- This provides compatibility with versions prior to GHC 8.0 / base-4.9, when `Data.Semigroup`
         -- still lived in `semigroups`.
