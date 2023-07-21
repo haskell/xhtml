@@ -1,4 +1,8 @@
+{-# language OverloadedStrings #-}
+
 module Text.XHtml.Extras where
+
+import qualified Data.Text.Lazy as LText
 
 import Text.XHtml.Internals
 import Text.XHtml.Strict.Elements
@@ -11,21 +15,28 @@ import Text.XHtml.Strict.Attributes
 -- | Convert a 'String' to 'Html', converting
 --   characters that need to be escaped to HTML entities.
 stringToHtml :: String -> Html
-stringToHtml = primHtml . stringToHtmlString 
+stringToHtml = primHtml . builderToString . stringToHtmlString
+
+{-# INLINE stringToHtml #-}
 
 -- | This converts a string, but keeps spaces as non-line-breakable.
 lineToHtml :: String -> Html
-lineToHtml = primHtml . concatMap htmlizeChar2 . stringToHtmlString 
-   where 
-      htmlizeChar2 ' ' = "&nbsp;"
-      htmlizeChar2 c   = [c]
+lineToHtml =
+    primHtmlNonEmptyBuilder . stringToHtmlString . foldMap htmlizeChar2
+  where
+    htmlizeChar2 ' ' = "&nbsp;"
+    htmlizeChar2 c   = [c]
+
+{-# INLINE lineToHtml #-}
 
 -- | This converts a string, but keeps spaces as non-line-breakable,
 --   and adds line breaks between each of the strings in the input list.
 linesToHtml :: [String] -> Html
 linesToHtml []     = noHtml
-linesToHtml (x:[]) = lineToHtml x
+linesToHtml [x]    = lineToHtml x
 linesToHtml (x:xs) = lineToHtml x +++ br +++ linesToHtml xs
+
+{-# INLINE linesToHtml #-}
 
 --
 -- * Html abbreviations
@@ -41,10 +52,10 @@ spaceHtml     :: Html
 bullet        :: Html
 
 
-primHtmlChar  = \ x -> primHtml ("&" ++ x ++ ";")
-copyright     = primHtmlChar "copy"
-spaceHtml     = primHtmlChar "nbsp"
-bullet        = primHtmlChar "#149"
+primHtmlChar x = primHtml ("&" ++ x ++ ";")
+copyright      = primHtmlChar "copy"
+spaceHtml      = primHtmlChar "nbsp"
+bullet         = primHtmlChar "#149"
 
 -- | Same as 'paragraph'.
 p :: Html -> Html
@@ -54,7 +65,7 @@ p =  paragraph
 -- * Hotlinks
 --
 
-type URL = String
+type URL = LText.Text
 
 data HotLink = HotLink {
       hotLinkURL        :: URL,
@@ -76,7 +87,7 @@ hotlink url h = HotLink {
       hotLinkAttributes = [] }
 
 
--- 
+--
 -- * Lists
 --
 
@@ -96,19 +107,19 @@ defList items
 -- * Forms
 --
 
-widget :: String -> String -> [HtmlAttr] -> Html
+widget :: LText.Text -> LText.Text -> [HtmlAttr] -> Html
 widget w n attrs = input ! ([thetype w] ++ ns ++ attrs)
-  where ns = if null n then [] else [name n,identifier n]
+  where ns = if LText.null n then [] else [name n,identifier n]
 
-checkbox :: String -> String -> Html
-hidden   :: String -> String -> Html
-radio    :: String -> String -> Html
-reset    :: String -> String -> Html
-submit   :: String -> String -> Html
-password :: String           -> Html
-textfield :: String          -> Html
-afile    :: String           -> Html
-clickmap :: String           -> Html
+checkbox :: LText.Text -> LText.Text -> Html
+hidden   :: LText.Text -> LText.Text -> Html
+radio    :: LText.Text -> LText.Text -> Html
+reset    :: LText.Text -> LText.Text -> Html
+submit   :: LText.Text -> LText.Text -> Html
+password :: LText.Text           -> Html
+textfield :: LText.Text          -> Html
+afile    :: LText.Text           -> Html
+clickmap :: LText.Text           -> Html
 
 checkbox n v = widget "checkbox" n [value v]
 hidden   n v = widget "hidden"   n [value v]
@@ -121,9 +132,9 @@ afile    n   = widget "file"     n []
 clickmap n   = widget "image"    n []
 
 {-# DEPRECATED menu "menu generates strange XHTML, and is not flexible enough. Roll your own that suits your needs." #-}
-menu :: String -> [Html] -> Html
+menu :: LText.Text -> [Html] -> Html
 menu n choices
    = select ! [name n] << [ option << p << choice | choice <- choices ]
 
-gui :: String -> Html -> Html
+gui :: LText.Text -> Html -> Html
 gui act = form ! [action act,method "post"]

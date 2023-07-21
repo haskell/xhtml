@@ -1,3 +1,5 @@
+{-# language OverloadedStrings #-}
+
 -- | Produces XHTML 1.0 Transitional.
 module Text.XHtml.Transitional (
      -- * Data types
@@ -5,13 +7,16 @@ module Text.XHtml.Transitional (
      -- * Classes
      HTML(..), ADDATTRS(..), CHANGEATTRS(..),
      -- * Primitives and basic combinators
-     (<<), concatHtml, (+++), 
+     (<<), concatHtml, (+++),
      noHtml, isNoHtml, tag, itag,
      htmlAttrPair, emptyAttr, intAttr, strAttr, htmlAttr,
-     primHtml, 
+     primHtml,
      -- * Rendering
-     showHtml, renderHtml, prettyHtml, 
+     showHtml, renderHtml, prettyHtml,
      showHtmlFragment, renderHtmlFragment, prettyHtmlFragment,
+     -- * Re-exports
+     LText,
+     Builder,
      module Text.XHtml.Strict.Elements,
      module Text.XHtml.Frameset.Elements,
      module Text.XHtml.Transitional.Elements,
@@ -34,26 +39,26 @@ import Text.XHtml.Transitional.Attributes
 import Text.XHtml.Extras
 
 
-docType :: String
+docType :: Builder
 docType =
-      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"" ++
+      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"" <>
      " \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
 
 -- | Output the HTML without adding newlines or spaces within the markup.
 --   This should be the most time and space efficient way to
 --   render HTML, though the output is quite unreadable.
-showHtml :: HTML html => html -> String
+showHtml :: HTML html => html -> Builder
 showHtml = showHtmlInternal docType
 
 -- | Outputs indented HTML. Because space matters in
 --   HTML, the output is quite messy.
-renderHtml :: HTML html => html -> String
+renderHtml :: HTML html => html -> Builder
 renderHtml = renderHtmlInternal docType
 
 -- | Outputs indented HTML, with indentation inside elements.
---   This can change the meaning of the HTML document, and 
+--   This can change the meaning of the HTML document, and
 --   is mostly useful for debugging the HTML output.
 --   The implementation is inefficient, and you are normally
 --   better off using 'showHtml' or 'renderHtml'.
 prettyHtml :: HTML html => html -> String
-prettyHtml = prettyHtmlInternal docType
+prettyHtml = prettyHtmlInternal (builderToString docType)

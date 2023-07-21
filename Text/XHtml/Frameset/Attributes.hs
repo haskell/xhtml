@@ -1,4 +1,5 @@
 {-# OPTIONS_HADDOCK hide #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Text.XHtml.Frameset.Attributes where
 
@@ -18,5 +19,5 @@ marginwidth         =   intAttr "marginwidth"
 noresize            ::           HtmlAttr
 noresize            = emptyAttr "noresize"
 
-scrolling           :: String -> HtmlAttr
+scrolling           :: LText -> HtmlAttr
 scrolling           =   strAttr "scrolling"

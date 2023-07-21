@@ -1,5 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
+{-# LANGUAGE OverloadedStrings #-}
+
 module Text.XHtml.Transitional.Attributes where
 
 import Text.XHtml.Internals
@@ -7,27 +9,27 @@ import Text.XHtml.Internals
 -- * Extra attributes in XHTML Transitional
 
 {-# DEPRECATED alink "This attribute is deprecated in XHTML 1.0" #-}
-alink               :: String -> HtmlAttr
+alink               :: LText -> HtmlAttr
 alink               =   strAttr "alink"
 
 {-# DEPRECATED background "This attribute is deprecated in XHTML 1.0" #-}
-background          :: String -> HtmlAttr
+background          :: LText -> HtmlAttr
 background          =   strAttr "background"
 
 {-# DEPRECATED bgcolor "This attribute is deprecated in XHTML 1.0" #-}
-bgcolor             :: String -> HtmlAttr
+bgcolor             :: LText -> HtmlAttr
 bgcolor             =   strAttr "bgcolor"
 
 {-# DEPRECATED clear "This attribute is deprecated in XHTML 1.0" #-}
-clear               :: String -> HtmlAttr
+clear               :: LText -> HtmlAttr
 clear               =   strAttr "clear"
 
 {-# DEPRECATED code "This attribute is deprecated in XHTML 1.0" #-}
-code                :: String -> HtmlAttr
+code                :: LText -> HtmlAttr
 code                =   strAttr "code"
 
 {-# DEPRECATED color "This attribute is deprecated in XHTML 1.0" #-}
-color               :: String -> HtmlAttr
+color               :: LText -> HtmlAttr
 color               =   strAttr "color"
 
 {-# DEPRECATED compact "This attribute is deprecated in XHTML 1.0" #-}
@@ -35,7 +37,7 @@ compact             ::           HtmlAttr
 compact             = emptyAttr "compact"
 
 {-# DEPRECATED face "This attribute is deprecated in XHTML 1.0" #-}
-face                :: String -> HtmlAttr
+face                :: LText -> HtmlAttr
 face                =   strAttr "face"
 
 {-# DEPRECATED hspace "This attribute is deprecated in XHTML 1.0" #-}
@@ -43,7 +45,7 @@ hspace              :: Int    -> HtmlAttr
 hspace              =   intAttr "hspace"
 
 {-# DEPRECATED link "This attribute is deprecated in XHTML 1.0" #-}
-link                :: String -> HtmlAttr
+link                :: LText -> HtmlAttr
 link                =   strAttr "link"
 
 {-# DEPRECATED noshade "This attribute is deprecated in XHTML 1.0" #-}
@@ -58,19 +60,19 @@ nowrap              = emptyAttr "nowrap"
 start               :: Int    -> HtmlAttr
 start               =   intAttr "start"
 
-target              :: String -> HtmlAttr
+target              :: LText -> HtmlAttr
 target              =   strAttr "target"
 
 {-# DEPRECATED text "This attribute is deprecated in XHTML 1.0" #-}
-text                :: String -> HtmlAttr
+text                :: LText -> HtmlAttr
 text                =   strAttr "text"
 
 {-# DEPRECATED version "This attribute is deprecated in XHTML 1.0" #-}
-version             :: String -> HtmlAttr
+version             :: LText -> HtmlAttr
 version             =   strAttr "version"
 
 {-# DEPRECATED vlink "This attribute is deprecated in XHTML 1.0" #-}
-vlink               :: String -> HtmlAttr
+vlink               :: LText -> HtmlAttr
 vlink               =   strAttr "vlink"
 
 {-# DEPRECATED vspace "This attribute is deprecated in XHTML 1.0" #-}
@@ -84,22 +86,22 @@ vspace              =   intAttr "vspace"
 --
 
 {-# DEPRECATED aqua,black,blue,fuchsia,gray,green,lime,maroon,navy,olive,purple,red,silver,teal,yellow,white "The use of color attibutes is deprecated in XHTML 1.0" #-}
-aqua          :: String
-black         :: String
-blue          :: String
-fuchsia       :: String
-gray          :: String
-green         :: String
-lime          :: String
-maroon        :: String
-navy          :: String
-olive         :: String
-purple        :: String
-red           :: String
-silver        :: String
-teal          :: String
-yellow        :: String
-white         :: String
+aqua          :: LText
+black         :: LText
+blue          :: LText
+fuchsia       :: LText
+gray          :: LText
+green         :: LText
+lime          :: LText
+maroon        :: LText
+navy          :: LText
+olive         :: LText
+purple        :: LText
+red           :: LText
+silver        :: LText
+teal          :: LText
+yellow        :: LText
+white         :: LText
 
 aqua          = "aqua"
 black         = "black"
