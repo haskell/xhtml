@@ -23,6 +23,7 @@ module Text.XHtml.Internals
 import qualified Data.Text.Lazy as LText
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy.Encoding as LText
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Builder hiding (char7)
 import qualified Data.ByteString.Builder.Prim as P
@@ -140,6 +141,16 @@ instance HTML Text where
 instance HTML LText.Text where
     toHtml "" = Html id
     toHtml xs = Html (HtmlString (lazyTextToHtmlString xs) : )
+    {-# INLINE toHtml #-}
+
+instance HTML BSL.ByteString where
+    toHtml "" = Html id
+    toHtml xs = Html (HtmlString (lazyByteString xs) : )
+    {-# INLINE toHtml #-}
+
+instance HTML BS.ByteString where
+    toHtml "" = Html id
+    toHtml xs = Html (HtmlString (byteString xs) : )
     {-# INLINE toHtml #-}
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
