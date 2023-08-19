@@ -23,6 +23,7 @@ module Text.XHtml.Internals
 import qualified Data.Text.Lazy as LText
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy.Encoding as LText
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Builder hiding (char7)
 import qualified Data.ByteString.Builder.Prim as P
@@ -51,7 +52,7 @@ data HtmlElement
       = HtmlString !Builder
         -- ^ ..just..plain..normal..text... but using &copy; and &amb;, etc.
       | HtmlTag {
-              markupTag      :: !Builder,
+              markupTag      :: !BSL.ByteString,
               markupAttrs    :: [HtmlAttr] -> [HtmlAttr],
               markupContent  :: !Html
               }
@@ -73,6 +74,10 @@ getHtmlElements html = unHtml html []
 builderToString :: Builder -> String
 builderToString =
     LText.unpack . LText.decodeUtf8 . toLazyByteString
+
+lazyByteStringToString :: BSL.ByteString -> String
+lazyByteStringToString =
+    LText.unpack . LText.decodeUtf8
 
 --
 -- * Classes
@@ -136,6 +141,16 @@ instance HTML Text where
 instance HTML LText.Text where
     toHtml "" = Html id
     toHtml xs = Html (HtmlString (lazyTextToHtmlString xs) : )
+    {-# INLINE toHtml #-}
+
+instance HTML BSL.ByteString where
+    toHtml "" = Html id
+    toHtml xs = Html (HtmlString (lazyByteString xs) : )
+    {-# INLINE toHtml #-}
+
+instance HTML BS.ByteString where
+    toHtml "" = Html id
+    toHtml xs = Html (HtmlString (byteString xs) : )
     {-# INLINE toHtml #-}
 
 mapDlist :: (a -> b) -> ([a] -> [a]) -> [b] -> [b]
@@ -223,7 +238,7 @@ isNoHtml :: Html -> Bool
 isNoHtml (Html xs) = null (xs [])
 
 -- | Constructs an element with a custom name.
-tag :: Builder -- ^ Element name
+tag :: BSL.ByteString -- ^ Element name
     -> Html -- ^ Element contents
     -> Html
 tag str htmls =
@@ -239,7 +254,7 @@ tag str htmls =
 
 -- | Constructs an element with a custom name, and
 --   without any children.
-itag :: Builder -> Html
+itag :: BSL.ByteString -> Html
 itag str = tag str noHtml
 
 emptyAttr :: Builder -> HtmlAttr
@@ -429,13 +444,16 @@ showHtml'(HtmlTag { markupTag = name,
                     markupContent = html,
                     markupAttrs = attrs })
     = if isValidHtmlITag name && isNoHtml html
-      then renderTag True name (attrs []) ""
-      else renderTag False name (attrs []) ""
+      then renderTag True nameBuilder (attrs []) ""
+      else renderTag False nameBuilder (attrs []) ""
         <> go (getHtmlElements html)
-        <> renderEndTag name ""
+        <> renderEndTag nameBuilder ""
   where
     go [] = mempty
     go (x:xs) = showHtml' x <> go xs
+
+    nameBuilder :: Builder
+    nameBuilder = lazyByteString name
 
 renderHtml' :: Int -> HtmlElement -> Builder
 renderHtml' _ (HtmlString str) = str
@@ -444,10 +462,10 @@ renderHtml' n (HtmlTag
                 markupContent = html,
                 markupAttrs = attrs })
       = if isValidHtmlITag name && isNoHtml html
-        then renderTag True name (attrs []) nl
-        else renderTag False name (attrs []) nl
+        then renderTag True nameBuilder (attrs []) nl
+        else renderTag False nameBuilder (attrs []) nl
           <> foldMap (renderHtml' (n+2)) (getHtmlElements html)
-          <> renderEndTag name nl
+          <> renderEndTag nameBuilder nl
     where
       nl :: Builder
       nl = charUtf8 '\n' <> tabs <> spaces
@@ -464,6 +482,9 @@ renderHtml' n (HtmlTag
           m | m <= 0 -> mempty
           m          -> Sem.stimes m (charUtf8 ' ')
 
+      nameBuilder :: Builder
+      nameBuilder = lazyByteString name
+
 
 prettyHtml' :: HtmlElement -> [String]
 prettyHtml' (HtmlString str) = [builderToString str]
@@ -473,21 +494,24 @@ prettyHtml' (HtmlTag
                 markupAttrs = attrs })
       = if isValidHtmlITag name && isNoHtml html
         then
-         [rmNL (renderTag True name (attrs []) "")]
+         [rmNL (renderTag True nameBuilder (attrs []) "")]
         else
-         [rmNL (renderTag False name (attrs []) "")] ++
+         [rmNL (renderTag False nameBuilder (attrs []) "")] ++
           shift (concatMap prettyHtml' (getHtmlElements html)) ++
-         [rmNL (renderEndTag name "")]
+         [rmNL (renderEndTag nameBuilder "")]
   where
       shift = map ("   " ++)
       rmNL = filter (/= '\n') . builderToString
 
+      nameBuilder :: Builder
+      nameBuilder = lazyByteString name
+
 
 -- | Show a start tag
 renderTag :: Bool       -- ^ 'True' if the empty tag shorthand should be used
-          -> Builder     -- ^ Tag name
+          -> Builder    -- ^ Tag name
           -> [HtmlAttr] -- ^ Attributes
-          -> Builder     -- ^ Whitespace to add after attributes
+          -> Builder    -- ^ Whitespace to add after attributes
           -> Builder
 renderTag empty name attrs nl
       = "<" <> name <> shownAttrs <> nl <> close
@@ -506,8 +530,8 @@ renderEndTag :: Builder -- ^ Tag name
              -> Builder
 renderEndTag name nl = "</" <> name <> nl <> ">"
 
-isValidHtmlITag :: Builder -> Bool
-isValidHtmlITag bldr = toLazyByteString bldr `Set.member` validHtmlITags
+isValidHtmlITag :: BSL.ByteString -> Bool
+isValidHtmlITag bs = bs `Set.member` validHtmlITags
 
 -- | The names of all elements which can be represented using the empty tag
 --   short-hand.
