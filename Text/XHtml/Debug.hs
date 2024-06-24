@@ -101,8 +101,8 @@ debugHtml obj = table ! [border 0] <<
               args = if null attrs
                      then ""
                      else "  " <> unwords (map show attrs)
-              hd = xsmallFont << ("<" <> builderToString tag' <> args <> ">")
-              tl = xsmallFont << ("</" <> builderToString tag' <> ">")
+              hd = xsmallFont << ("<" <> lazyByteStringToString tag' <> args <> ">")
+              tl = xsmallFont << ("</" <> lazyByteStringToString tag' <> ">")
 
 bgcolor' :: LText.Text -> HtmlAttr
 bgcolor' c = thestyle ("background-color:" <> c)
