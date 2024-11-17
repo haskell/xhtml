@@ -1,3 +1,7 @@
+## 3000.4.0.0
+
+- Memory allocation improvements [#20](https://github.com/haskell/xhtml/pull/20)
+
 ## 3000.3.0.0
 
 - The internal representation has changed from `String` and `[String]` to a
