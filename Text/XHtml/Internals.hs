@@ -327,7 +327,6 @@ wordHtmlEscaped =
   P.condB (== c2w '>' ) (fixed4 ('&',('g',('t',';')))) $                  -- &gt;
   P.condB (== c2w '&' ) (fixed5 ('&',('a',('m',('p',';'))))) $            -- &amp;
   P.condB (== c2w '"' ) (fixed6 ('&',('q',('u',('o',('t',';')))))) $      -- &quot;
-  P.condB (== c2w '\'') (fixed5 ('&',('#',('3',('9',';'))))) $            -- &#39;
   P.condB (\c -> c >= c2w ' ' || c == c2w '\t' || c == c2w '\n' || c == c2w '\r')
         (P.liftFixedToBounded P.word8) P.emptyB
   where
