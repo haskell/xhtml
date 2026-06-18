@@ -1,3 +1,7 @@
+## 3000.4.1.0
+
+- Fix Inconsistent single quote escaping between String and Text HTML instances [#24](github.com/haskell/xhtml/pull/24)
+
 ## 3000.4.0.0
 
 - Memory allocation improvements [#20](https://github.com/haskell/xhtml/pull/20)
