@@ -12,8 +12,9 @@
 -- An XHTML combinator library.
 --
 -- Based on the original Text.Html library by Andy Gill. 
--- See <http://www.cse.ogi.edu/~andy/html/intro.htm> for
--- an introduction to that library.
+-- See <https://web.archive.org/web/20070606142913/http://www.cse.ogi.edu:80/~andy/html/intro.htm>
+-- (an archived copy, as the original site is gone) for an introduction
+-- to that library.
 --
 -- This module re-exports "Text.XHtml.Transitional", which produces
 -- XHTML 1.0 Transitional.
